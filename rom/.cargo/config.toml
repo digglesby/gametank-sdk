@@ -1,0 +1,14 @@
+[target.mos-unknown-none]
+rustflags = [
+    "-C", "link-arg=-nostartfiles",
+    "-C", "link-arg=-nostdlib",
+    "-C", "panic=abort",
+    "-C","link-arg=-Wl,-Map=target/link.map",
+    "-C", "target-cpu=mosw65c02"
+]
+
+[unstable]
+build-std = ["core"]
+
+[profile.release]
+panic = "abort"

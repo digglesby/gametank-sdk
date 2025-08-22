@@ -1,0 +1,18 @@
+[package]
+name = "main"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+build="build.rs"
+strip = "none"
+opt-level = "z"  # Optimize for size.
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[dependencies]
+volatile-register = "0.2.2"
+bit_field = "0.10.2"
+bitflags = "2.9.2"
+

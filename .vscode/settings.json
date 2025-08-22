@@ -1,0 +1,10 @@
+{
+    "editor.fontFamily": "fira-code-nerd, FiraCode Nerd Font, Consolas, 'Courier New', monospace",
+    "editor.fontLigatures": true,
+
+    "rust-analyzer.linkedProjects": [
+        "rom/Cargo.toml",
+        "tools/gtld/Cargo.toml",
+        "tools/gtrom/Cargo.toml"
+    ]
+}
