@@ -4,7 +4,9 @@ fn main() {
     // Only run for the correct target
     let target = env::var("TARGET").unwrap();
     if target != "mos-unknown-none" {
-        println!("cargo:warning=Not targeting mos-unknown-none; skipping linker script generation.");
+        println!(
+            "cargo:warning=Not targeting mos-unknown-none; skipping linker script generation."
+        );
         return;
     }
 
@@ -16,7 +18,12 @@ fn main() {
     writeln!(f, "MEMORY {{").unwrap();
     for bank in 0..=126 {
         let addr = 0x8000 + bank * 0x10000;
-        writeln!(f, "  BANK{0} (rx) : ORIGIN = 0x{1:06X}, LENGTH = 0x4000", bank, addr).unwrap();
+        writeln!(
+            f,
+            "  BANK{0} (rx) : ORIGIN = 0x{1:06X}, LENGTH = 0x4000",
+            bank, addr
+        )
+        .unwrap();
     }
     writeln!(f, "  RAM (rwx) : ORIGIN = 0x0400, LENGTH = 0x1BFF").unwrap();
     writeln!(f, "  ZP (rw) : ORIGIN = 0x0040, LENGTH = 0x00C0").unwrap();
@@ -36,10 +43,26 @@ fn main() {
 
     // writeln!(f, "  .init : {{ KEEP(*(.init)) }} > FIXED_FLASH").unwrap();
 
-    writeln!(f, "  .vector_table : {{ KEEP(*(.vector_table)) }} > VECTOR_TABLE").unwrap();
-    writeln!(f, "  .bss : {{ __bss_start = .; *(.bss*) __bss_end = .; }} > RAM").unwrap();
-    writeln!(f, "  .zp : {{ __zp_start = .; KEEP(*(.data.zp)) __zp_end = .;}} > ZP AT > FIXED_FLASH").unwrap();
-    writeln!(f, "  .data : {{ __data_start = .; *(.data*) __data_end = .; }} > RAM AT > FIXED_FLASH").unwrap();
+    writeln!(
+        f,
+        "  .vector_table : {{ KEEP(*(.vector_table)) }} > VECTOR_TABLE"
+    )
+    .unwrap();
+    writeln!(
+        f,
+        "  .bss : {{ __bss_start = .; *(.bss*) __bss_end = .; }} > RAM"
+    )
+    .unwrap();
+    writeln!(
+        f,
+        "  .zp : {{ __zp_start = .; KEEP(*(.data.zp)) __zp_end = .;}} > ZP AT > FIXED_FLASH"
+    )
+    .unwrap();
+    writeln!(
+        f,
+        "  .data : {{ __data_start = .; *(.data*) __data_end = .; }} > RAM AT > FIXED_FLASH"
+    )
+    .unwrap();
 
     writeln!(f, "  PROVIDE(__zp_load = LOADADDR(.zp));").unwrap();
     writeln!(f, "  PROVIDE(__zp_start = ADDR(.zp));").unwrap();
@@ -48,7 +71,7 @@ fn main() {
     writeln!(f, "  PROVIDE(__data_load = LOADADDR(.data));").unwrap();
     writeln!(f, "  PROVIDE(__data_start = ADDR(.data));").unwrap();
     writeln!(f, "  PROVIDE(__data_end = .);").unwrap();
-    
+
     writeln!(f, "  PROVIDE(__bss_start = ADDR(.bss));").unwrap();
     writeln!(f, "  PROVIDE(__bss_end = .);").unwrap();
 
@@ -65,4 +88,3 @@ fn main() {
     println!("cargo:rustc-link-search=native=target/asm");
     println!("cargo:rustc-link-lib=static=asm");
 }
-

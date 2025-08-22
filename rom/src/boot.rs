@@ -9,7 +9,6 @@ fn panic(_panic: &PanicInfo<'_>) -> ! {
 
 pub static mut VBLANK: bool = false;
 
-
 unsafe extern "C" {
     #[inline(always)]
     pub unsafe fn null_interrupt();
@@ -27,7 +26,6 @@ unsafe extern "C" {
     pub unsafe static mut __rc51: u8;
     pub unsafe static mut __rc0: u8;
     pub unsafe static mut __rc1: u8;
-
 
     unsafe static __data_load: u8;
     unsafe static mut __data_start: u8;
@@ -76,16 +74,19 @@ unsafe fn init_data_and_bss() {
 
 #[unsafe(no_mangle)]
 extern "C" fn vblank_nmi() {
-    unsafe { VBLANK = true; }
-    unsafe { null_interrupt(); }
+    unsafe {
+        VBLANK = true;
+    }
+    unsafe {
+        null_interrupt();
+    }
 }
-
 
 #[unsafe(link_section = ".vector_table")]
 #[unsafe(no_mangle)]
 pub static _VECTOR_TABLE: [unsafe extern "C" fn(); 3] = [
-    vblank_nmi, // Non-Maskable Interrupt vector
-    __boot, // Reset vector
+    vblank_nmi,     // Non-Maskable Interrupt vector
+    __boot,         // Reset vector
     null_interrupt, // IRQ/BRK vector
 ];
 

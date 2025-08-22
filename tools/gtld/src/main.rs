@@ -1,20 +1,17 @@
+use dialoguer::Select;
+use dialoguer::console::style;
+use serialport::{SerialPort, SerialPortInfo, available_ports};
 use std::fs;
 use std::io::{Read, Write};
 use std::thread::sleep;
 use std::time::Duration;
-use dialoguer::console::style;
-use dialoguer::Select;
-use serialport::{available_ports, SerialPort, SerialPortInfo};
 use structopt::StructOpt;
 use tempfile::NamedTempFile;
 
 static FIRMWARE: &[u8] = include_bytes!("latest-fw.hex");
 
 #[derive(Debug, PartialEq, StructOpt)]
-#[structopt(
-    name = "gtld",
-    about = "gametank (flash) loader"
-)]
+#[structopt(name = "gtld", about = "gametank (flash) loader")]
 struct Opt {
     #[structopt(subcommand)]
     subcommand: Subcommands,
@@ -22,14 +19,14 @@ struct Opt {
 #[derive(Debug, PartialEq, StructOpt)]
 enum Subcommands {
     Load { file: Option<String> },
-    Dump { },
+    Dump {},
     DangerZone(DangerZone),
 }
 
 #[derive(Debug, PartialEq, StructOpt)]
 enum DangerZone {
-    FwUpdate  { file: Option<String> },
-    SelfDestruct
+    FwUpdate { file: Option<String> },
+    SelfDestruct,
 }
 
 fn main() {
@@ -64,17 +61,20 @@ fn select_port() -> anyhow::Result<String> {
     let ports = available_ports().expect("No ports found!");
 
     // filter ports for USB serial on linux/windows/macos
-    let ports = ports.iter().filter(|port| {
-        port.port_name.contains("USB") ||
-        port.port_name.contains("COM") ||
-        port.port_name.contains("usb")
-    }).collect::<Vec<&SerialPortInfo>>();
+    let ports = ports
+        .iter()
+        .filter(|port| {
+            port.port_name.contains("USB")
+                || port.port_name.contains("COM")
+                || port.port_name.contains("usb")
+        })
+        .collect::<Vec<&SerialPortInfo>>();
 
     match ports.as_slice() {
         [] => {
             println!("No USB serial ports found! Are you in the dialout group?");
             Err(anyhow::anyhow!("No USB serial ports found!"))
-        },
+        }
         [p] => {
             println!("Using {}", p.port_name);
             Ok(p.port_name.clone())
@@ -88,7 +88,8 @@ fn select_port() -> anyhow::Result<String> {
                 .with_prompt("Select your USB serial port")
                 .default(0)
                 .items(&port_names)
-                .interact().expect("this should work?");
+                .interact()
+                .expect("this should work?");
 
             Ok(port_names[selected].clone())
         }
@@ -144,7 +145,8 @@ pub fn read_output(port: &mut Box<dyn SerialPort>) {
 pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
     let crc32_in = crc32fast::hash(data);
 
-    port.write_all(format!("shift {:X}\r", bank).as_bytes()).expect("Failed to write bank");
+    port.write_all(format!("shift {:X}\r", bank).as_bytes())
+        .expect("Failed to write bank");
     port.flush().ok();
     read_output(port);
 
@@ -156,12 +158,14 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
 
         // Send the header alone
         let header = format!("writeMulti {:X} 1000\r", chunk_start);
-        port.write_all(header.as_bytes()).expect("write header failed");
+        port.write_all(header.as_bytes())
+            .expect("write header failed");
         port.flush().ok();
 
         sleep(Duration::from_millis(50));
 
-        port.write_all(&data[chunk_start..chunk_end]).expect("write data failed");
+        port.write_all(&data[chunk_start..chunk_end])
+            .expect("write data failed");
         port.flush().ok();
 
         sleep(Duration::from_millis(20));
@@ -169,7 +173,8 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
         wait_for_str(port, "ACK");
     }
 
-    port.write_all("checksum 0 4000\r".as_bytes()).expect("failed to get checksum");
+    port.write_all("checksum 0 4000\r".as_bytes())
+        .expect("failed to get checksum");
     let checksum = wait_for_str(port, "CRC32");
 
     if checksum.contains(&format!("{:X}", crc32_in)) {
@@ -216,9 +221,7 @@ pub fn flash_firmware(port_name: String, firmware: Option<String>) {
             tmp.write_all(&FIRMWARE).unwrap();
             tmp.path().to_str().unwrap().to_string()
         }
-        Some(path) => {
-            path
-        }
+        Some(path) => path,
     };
 
     flash_optiboot_da(&port_name, &firmware_file);
@@ -228,12 +231,17 @@ pub fn flash_optiboot_da(port: &str, firmware_path: &str) {
     let status = std::process::Command::new("avrdude")
         .args(&[
             "-v",
-            "-p", "avr64da64",
-            "-c", "arduino",
-            "-P", port,
-            "-b", "115200",
+            "-p",
+            "avr64da64",
+            "-c",
+            "arduino",
+            "-P",
+            port,
+            "-b",
+            "115200",
             "-D",
-            "-U", &format!("flash:w:{}:i", firmware_path),
+            "-U",
+            &format!("flash:w:{}:i", firmware_path),
         ])
         .status()
         .expect("Failed to run avrdude");
@@ -243,16 +251,14 @@ pub fn flash_optiboot_da(port: &str, firmware_path: &str) {
     }
 }
 
-
 pub fn dump(port: &mut Box<dyn SerialPort>) {
-    let mut buf = [0u8; 4096*4];
+    let mut buf = [0u8; 4096 * 4];
     port.write_all(b"dump\r").unwrap();
     port.flush().ok();
 
     port.read_exact(&mut buf).unwrap();
     println!("{:?}", &buf);
 }
-
 
 pub fn write_all(port: &mut Box<dyn SerialPort>, data: Vec<u8>) {
     let mut data = data.to_vec();
@@ -275,7 +281,7 @@ pub fn write_all(port: &mut Box<dyn SerialPort>, data: Vec<u8>) {
 
     for (idx, shifted_bank) in (first_bank..128).enumerate() {
         let start = idx * 16384;
-        let end = (idx+1) * 16384;
+        let end = (idx + 1) * 16384;
 
         let hash = crc32fast::hash(&data[start..end]);
         if hash == 0xAB_54_D2_86 {

@@ -1,13 +1,10 @@
-
-
 use bit_field::BitField;
-use volatile_register::{WO};
-use bitflags::{self, Flags};
 use bitflags::Bits;
+use bitflags::{self, Flags};
+use volatile_register::WO;
 
-use crate::boot::{disable_irq_handler, enable_irq_handler, wait, _VECTOR_TABLE};
+use crate::boot::{_VECTOR_TABLE, disable_irq_handler, enable_irq_handler, wait};
 use crate::sdk::scr;
-
 
 bitflags::bitflags! {
     #[derive(Copy, Clone)]
@@ -73,7 +70,7 @@ impl VideoDma {
             VideoDma::DmaFb(framebuffers) => framebuffers.blitter(sc),
             VideoDma::DmaBlit(blitter) => blitter,
             VideoDma::DmaSprites(sprite_mem) => sprite_mem.blitter(sc),
-        }        
+        }
     }
 
     #[inline(always)]
@@ -85,8 +82,6 @@ impl VideoDma {
         }
     }
 }
-
-
 
 pub struct Framebuffers(());
 pub struct Blitter(());
@@ -115,7 +110,6 @@ impl Framebuffers {
 }
 
 impl SpriteMem {
-
     #[inline(always)]
     pub fn blitter(self, sc: &mut SystemControl) -> Blitter {
         sc.mir.video_reg.insert(VideoFlags::DMA_ENABLE);
@@ -171,12 +165,13 @@ impl Blitter {
 
     #[inline(always)]
     pub fn sprite_mem(self, sc: &mut SystemControl) -> SpriteMem {
-        sc.mir.video_reg.remove(VideoFlags::DMA_ENABLE | VideoFlags::DMA_CPU_TO_VRAM);
+        sc.mir
+            .video_reg
+            .remove(VideoFlags::DMA_ENABLE | VideoFlags::DMA_CPU_TO_VRAM);
         sc.scr.video_reg = sc.mir.video_reg;
         SpriteMem(())
     }
 }
-
 
 /// System Control Register
 /// $2000 	Write 1 to reset audio coprocessor
@@ -184,8 +179,8 @@ impl Blitter {
 /// $2005 	Banking Register
 /// $2006 	Audio enable and sample rate
 /// $2007 	Video/Blitter Flags
-#[repr(C,packed)]
-pub struct  Scr {
+#[repr(C, packed)]
+pub struct Scr {
     pub audio_reset: u8,
     pub audio_nmi: u8,
     _pad0: [u8; 3], // Skips to $2005
@@ -215,7 +210,7 @@ impl SystemControl {
         unsafe {
             // mir is zeroe'd
             let mir = &mut SCR_MIR;
-            let scr = &mut *(0x2000 as *mut Scr); 
+            let scr = &mut *(0x2000 as *mut Scr);
 
             mir.video_reg.insert(VideoFlags::DMA_NMI);
             mir.video_reg.insert(VideoFlags::DMA_IRQ);
@@ -231,10 +226,8 @@ impl SystemControl {
             scr.video_reg = mir.video_reg;
 
             // clear_irq();
-            
-            Self {
-                scr, mir
-            }
+
+            Self { scr, mir }
         }
     }
 
@@ -251,7 +244,9 @@ impl SystemControl {
     //
     #[inline(always)]
     pub fn set_fill_mode(&mut self, mode: BlitterFillMode) {
-        self.mir.video_reg.set(VideoFlags::DMA_COLORFILL, mode == BlitterFillMode::Color);
+        self.mir
+            .video_reg
+            .set(VideoFlags::DMA_COLORFILL, mode == BlitterFillMode::Color);
         self.scr.video_reg = self.mir.video_reg;
     }
 }
@@ -259,17 +254,17 @@ impl SystemControl {
 #[derive(PartialEq)]
 pub enum BlitterFillMode {
     Sprite,
-    Color
+    Color,
 }
 
 pub struct DmaManager {
-    pub video_dma: Option<VideoDma>
+    pub video_dma: Option<VideoDma>,
 }
 
 impl DmaManager {
     fn new(vdma: VideoDma) -> Self {
         Self {
-            video_dma: Some(vdma)
+            video_dma: Some(vdma),
         }
     }
 
@@ -285,7 +280,7 @@ impl DmaManager {
         let fb = self.video_dma.take()?.framebuffers(sc);
         Some(FramebuffersGuard {
             dma_slot: &mut self.video_dma,
-            inner: fb
+            inner: fb,
         })
     }
 
@@ -293,7 +288,7 @@ impl DmaManager {
         let sm = self.video_dma.take()?.sprite_mem(sc);
         Some(SpriteMemGuard {
             dma_slot: &mut self.video_dma,
-            inner: sm
+            inner: sm,
         })
     }
 }
@@ -308,7 +303,6 @@ pub struct BlitterGuard<'a> {
     inner: Blitter,
 }
 
-
 impl<'a> Drop for BlitterGuard<'a> {
     fn drop(&mut self) {
         *self.dma_slot = Some(VideoDma::DmaBlit(Blitter(())));
@@ -320,7 +314,6 @@ pub struct FramebuffersGuard<'a> {
     inner: Framebuffers,
 }
 
-
 impl<'a> Drop for FramebuffersGuard<'a> {
     fn drop(&mut self) {
         *self.dma_slot = Some(VideoDma::DmaFb(Framebuffers(())));
@@ -331,7 +324,6 @@ pub struct SpriteMemGuard<'a> {
     dma_slot: &'a mut Option<VideoDma>,
     inner: SpriteMem,
 }
-
 
 impl<'a> Drop for SpriteMemGuard<'a> {
     fn drop(&mut self) {
@@ -345,8 +337,6 @@ impl<'a> SpriteMemGuard<'a> {
         unsafe { &mut *(0x4000 as *mut [u8; 0x4000]) }
     }
 }
-
-
 
 impl<'a> FramebuffersGuard<'a> {
     #[inline(always)]
@@ -369,7 +359,15 @@ impl<'a> FramebuffersGuard<'a> {
 
 impl<'a> BlitterGuard<'a> {
     #[inline(always)]
-    pub fn draw_square(&mut self, sc: &mut SystemControl, x: u8, y: u8, width: u8, height: u8, color: u8) {
+    pub fn draw_square(
+        &mut self,
+        sc: &mut SystemControl,
+        x: u8,
+        y: u8,
+        width: u8,
+        height: u8,
+        color: u8,
+    ) {
         sc.set_fill_mode(BlitterFillMode::Color);
         unsafe {
             let mut bcr = Bcr::new();
@@ -383,7 +381,16 @@ impl<'a> BlitterGuard<'a> {
     }
 
     #[inline(always)]
-    pub fn draw_sprite(&mut self, sc: &mut SystemControl, sx: u8, sy: u8, fb_x: u8, fb_y: u8, width: u8, height: u8) {
+    pub fn draw_sprite(
+        &mut self,
+        sc: &mut SystemControl,
+        sx: u8,
+        sy: u8,
+        fb_x: u8,
+        fb_y: u8,
+        width: u8,
+        height: u8,
+    ) {
         sc.set_fill_mode(BlitterFillMode::Sprite);
         unsafe {
             let mut bcr = Bcr::new();
@@ -400,13 +407,12 @@ impl<'a> BlitterGuard<'a> {
     #[inline(always)]
     pub fn wait_blit(&self) {
         unsafe {
-            wait();     
+            wait();
             let mut bcr = Bcr::new();
             bcr.start.write(0);
         }
     }
 }
-
 
 impl Console {
     #[inline(always)]
@@ -414,7 +420,7 @@ impl Console {
         // TODO: singleton-ize this?
         Self {
             sc: SystemControl::init(),
-            dma: DmaManager::new(VideoDma::DmaSprites(SpriteMem(())))
+            dma: DmaManager::new(VideoDma::DmaSprites(SpriteMem(()))),
         }
     }
 }
@@ -422,7 +428,6 @@ impl Console {
 unsafe extern "C" {
     unsafe fn _bank_shift_out(bank: u8);
 }
-
 
 // impl Scr {
 //     /// 0 = copy 16x16 across whole buffer

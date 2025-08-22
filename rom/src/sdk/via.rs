@@ -1,11 +1,11 @@
 use bit_field::BitField;
 use volatile_register::{RW, WO};
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 pub struct Via {
     pub iorb: RW<u8>, // input/output register b
     pub iora: RW<u8>, // input/output register a
-    pub ddrb: WO<u8>, // 
+    pub ddrb: WO<u8>, //
     pub ddra: WO<u8>,
     pub t1cl: WO<u8>,
     pub t1ch: WO<u8>,

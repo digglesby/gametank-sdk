@@ -14,25 +14,23 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Configure {
-        /// gtrom.toml to configure llvm shit. 
+        /// gtrom.toml to configure llvm shit.
         /// By default checks for a rustup mos toolchain, then checks for a podman or docker container
-        config_file: Option<String> 
+        _config_file: Option<String>,
     },
-    
-    Build {
 
-    }
+    Build {},
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    // TODO: check for 
+    // TODO: check for
 
     match cli.command {
-        Commands::Configure { config_file } => println!("not implemented"),
-        Commands::Build {  } => {
-            let rb = RomBuilder::init("/home/dewbrite/code/personal/gametank-sdk/rom".to_string());
-        },
+        Commands::Configure { _config_file } => println!("not implemented"),
+        Commands::Build {} => {
+            let _rb = RomBuilder::init("/home/dewbrite/code/personal/gametank-sdk/rom".to_string());
+        }
     }
 }
