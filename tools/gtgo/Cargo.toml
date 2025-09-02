@@ -1,0 +1,10 @@
+[package]
+name = "gtgo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ratatui = "0.29.0"
+rat-widget = "1.0.5"
+rat-theme = "0.27.11"
+anyhow = "1.0.99"
