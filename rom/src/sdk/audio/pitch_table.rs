@@ -60,3 +60,5 @@ pub const fn inc_to_hz(inc: u16) -> u32 {
 
 // sanity: inc=256 -> ~FS/256 ≈ ~54.6 Hz
 pub const INC_256_HZ: u32 = inc_to_hz(256);
+
+// pub const IDK: u16 = midi_inc(MidiNote::C5);

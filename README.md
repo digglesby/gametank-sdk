@@ -13,3 +13,9 @@ mkdir target/asm
 
 ➜ cargo +mos build --release -Z build-std=core --target mos-unknown-none
 
+
+---
+
+IMPORTANT
+
+After just/cargo build-ing, use gtrom to pack elf into a raw binary

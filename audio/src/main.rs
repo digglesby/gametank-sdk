@@ -8,7 +8,6 @@ use core::ptr::{self};
 use crate::{boot::{enable_irq_handler, return_from_interrupt, wait}, sine_table::{NES_CRUNCH, SINE_256}, vol::{Volume, VOLUME, VT}};
 
 mod boot;
-mod pitch_table;
 mod sine_table;
 mod vol;
 

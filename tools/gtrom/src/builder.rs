@@ -71,7 +71,7 @@ pub struct RomBuilder {}
 impl RomBuilder {
     pub fn init(path: String) -> Self {
         let mut newpath = path.clone();
-        newpath.push_str("/target/mos-unknown-none/release/main");
+        newpath.push_str("/target/mos-unknown-none/release/rom");
         let file_data = std::fs::read(newpath).expect("Could not read file.");
         let slice = file_data.as_slice();
         let file = ElfBytes::<AnyEndian>::minimal_parse(slice).expect("Open test1");
