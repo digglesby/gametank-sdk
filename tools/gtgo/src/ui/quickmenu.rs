@@ -1,14 +1,26 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, rc::Rc, time::Duration};
 
 use rat_widget::menu::{popup_menu, PopupMenu, PopupMenuState};
 use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent}, layout::{Alignment, Rect}, style::{Color, Modifier, Style, Stylize}, symbols::border::{self}, text::{Line, Span, Text}, widgets::{block::Position, Block, BorderType, List, ListDirection, ListState, Padding}, Frame};
 
 use crate::{helpers::{centered_rect, SCHEME}, Component};
 
-#[derive(Debug, Clone)]
-struct Item { label: String, enabled: bool, hotkey_idx: usize }
+pub struct QmItem {
+    label: &'static str,
+    enabled: bool,
+    active: Rc<Box<dyn Fn()>>,
+}
 
-impl<'a> Into<Text<'a>> for Item {
+pub fn qi<F>(label: &'static str, enabled: bool, active: F) -> QmItem
+where F: Fn() + 'static, {
+    QmItem { label, enabled, active: Rc::new(Box::new(active)) }
+}
+
+
+#[derive(Clone)]
+struct QuickMenuItem { label: String, enabled: bool, hotkey_idx: usize, active: Rc<Box<dyn Fn() -> ()>> }
+
+impl<'a> Into<Text<'a>> for QuickMenuItem {
     fn into(self) -> Text<'a> {
         let label = self.label;
         let idx = self.hotkey_idx.min(label.len().saturating_sub(1));
@@ -28,6 +40,7 @@ impl<'a> Into<Text<'a>> for Item {
 }
 
 
+#[derive(Debug, Clone, Copy)]
 enum Input {
     Selection(usize),
     Quit,
@@ -38,7 +51,7 @@ enum Input {
 
 pub struct QuickMenu {
     selection: usize,
-    list_items: Vec<Item>,
+    list_items: Vec<QuickMenuItem>,
     bound_keys: HashMap<KeyCode, Input>,
     is_active: bool,
     width: u16,
@@ -46,7 +59,7 @@ pub struct QuickMenu {
 }
 
 impl QuickMenu {
-    pub fn init(items: Vec<&'static str>) -> Self {
+    pub fn init(items: Vec<QmItem>) -> Self {
         let mut bound_keys = HashMap::new();
         bound_keys.insert(KeyCode::Esc, Input::Quit);
         bound_keys.insert(KeyCode::Char('q'), Input::Quit);
@@ -56,20 +69,20 @@ impl QuickMenu {
 
         let mut list_items = vec![];
 
-        for &s in &items {
+        let height = items.len() + 4; // top/bot border, pad
+
+        for QmItem{ label: s, enabled: en, active} in items {
             let idx = s.as_bytes().iter().enumerate()
                 .find_map(|(i, &b)| (b == b'_' && (i == 0 || s.as_bytes()[i - 1] != b'\\')).then_some(i))
                 .unwrap();
             let hotkey = s[idx + 1..].chars().next();
             let without = format!("{}{}", &s[..idx], &s[idx + 1..]);
 
-            list_items.push(Item { label: without, enabled: true, hotkey_idx: idx});
+            list_items.push(QuickMenuItem { label: without, enabled: true, hotkey_idx: idx, active });
             if let Some(keychar) = hotkey {
                 bound_keys.insert(KeyCode::Char(keychar.to_ascii_lowercase()), Input::Selection(list_items.len() - 1));
             }
         }
-
-        let height = items.len() + 4;
 
         Self {
             selection: 0,
@@ -139,7 +152,7 @@ impl Component for QuickMenu {
                 Event::Key(KeyEvent { code, .. }) if self.bound_keys.contains_key(&code) => {
                     match self.bound_keys.get(&code).unwrap() {
                         Input::Selection(n) => self.selection = *n,
-                        Input::Quit => self.is_active = false,
+                        Input::Quit => self.set_active(false),
                         Input::Enter => todo!(),
                         Input::Up => {
                             self.move_sel(-1);
@@ -153,8 +166,5 @@ impl Component for QuickMenu {
             }
         }
     }
-    
-    fn should_exit(&self) -> bool {
-        !self.is_active
-    }
 }
+

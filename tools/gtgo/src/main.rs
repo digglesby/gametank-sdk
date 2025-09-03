@@ -4,19 +4,24 @@ pub mod ui;
 
 use ratatui::{crossterm::event::Event, DefaultTerminal, Frame};
 use anyhow::{bail, Ok, Result};
+use crossbeam_channel::unbounded;
 
-use crate::{helpers::poll_events, main_menu::Menu};
+use crate::{helpers::poll_events, main_menu::MainMenu};
 
 pub trait Component {
     fn update(&mut self, events: Vec<Event>);
     fn render(&mut self, frame: &mut Frame);
-    fn should_exit(&self) -> bool;
 }
 
+pub enum GlobalEvent {
+    ChangeInterface(Box<dyn Component>),
+    Quit,
+}
 
 pub struct GtGo {
     terminal: DefaultTerminal,
-    state: Box<dyn Component>
+    state: Box<dyn Component>,
+    rx: crossbeam_channel::Receiver<GlobalEvent>
 }
 
 impl GtGo {
@@ -27,9 +32,13 @@ impl GtGo {
             self.state.render(f); // unhandled error
         });
 
-        if self.state.should_exit() {
-            bail!("Exit")
+        for event in self.rx.try_iter() {
+            match event {
+                GlobalEvent::ChangeInterface(component) => self.state = component,
+                GlobalEvent::Quit => bail!("Exit"),
+            }
         }
+
         Ok(())
     }
 }
@@ -42,9 +51,12 @@ fn main() -> Result<()> {
 }
 
 fn run(terminal: DefaultTerminal) -> Result<()> {
+    let (tx, rx) = crossbeam_channel::unbounded();
+
     let mut app = GtGo { 
         terminal, 
-        state: Box::new(Menu::init())
+        state: Box::new(MainMenu::init(tx)),
+        rx,
     };
     
     loop {
