@@ -2,6 +2,7 @@ pub mod main_menu;
 pub mod helpers;
 pub mod ui;
 pub mod tracker;
+pub mod midi;
 
 use ratatui::{crossterm::event::Event, DefaultTerminal, Frame};
 use anyhow::{bail, Ok, Result};
