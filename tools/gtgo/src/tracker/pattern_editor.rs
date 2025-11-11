@@ -12,6 +12,8 @@ pub enum PatternEvent {
     Right,
     Quit,
     Enter,
+    SmallIncrement,
+    SmallDecrement
 }
 
 pub struct PatternEditor {
@@ -48,13 +50,15 @@ impl PatternEditor {
             tx_handler(&cx_tx, KeyCode::Down, PatternEvent::Down),
             tx_handler(&cx_tx, KeyCode::Left, PatternEvent::Left),
             tx_handler(&cx_tx, KeyCode::Right, PatternEvent::Right),
+            tx_handler(&cx_tx, KeyCode::Char('j'), PatternEvent::SmallIncrement),
+            tx_handler(&cx_tx, KeyCode::Char('k'), PatternEvent::SmallDecrement),
         ];
 
         Self {
             scroll: -8,
             lanes: vec![
                 Lane::beat(),
-                Lane::seq(),    
+                Lane::seq(),
                 Lane::note(0), Lane::vol(0), Lane::fx(0),
                 Lane::note(1), Lane::vol(1), Lane::fx(1),
                 Lane::note(2), Lane::vol(2), Lane::fx(2),
@@ -94,6 +98,19 @@ impl PatternEditor {
             Some(n) => &pattern[n+1][beat as usize],
             None => &pattern[0][beat as usize],
         }
+    }
+
+    pub fn get_selected_beat(&mut self) -> Option<&mut Beat> {
+        // TODO: this is gonna confuse the SHIT out of people
+        let beat_idx = self.sel_y as usize;
+        let lane = &self.lanes[self.sel_x as usize];
+        let ch_idx = match lane.kind {
+            LaneKind::Beat => None,
+            LaneKind::Seq => Some(0),
+            _ => lane.ch,
+        }?;
+
+        Some(&mut self.current_pattern_mut()[ch_idx][beat_idx])
     }
 
     pub fn get_cell(&self, row: usize, column: usize) -> CellDisplay {
@@ -325,7 +342,15 @@ impl CellDisplay {
 
 impl Component for PatternEditor {
     fn update(&mut self, events: Vec<Event>) {
-        for event in self.cx_rx.try_iter() {
+        let (lane_kind, ch) = {
+            let lane = &self.lanes[self.sel_x as usize];
+            let kind = lane.kind;
+            let ch = lane.ch;
+            (kind, ch)
+        };
+        let sel_beat = self.sel_y as usize;
+
+        while let Ok(event) = self.cx_rx.try_recv() {
             match event {
                 PatternEvent::Up => self.sel_y -= 1,
                 PatternEvent::Down => self.sel_y += 1,
@@ -333,6 +358,30 @@ impl Component for PatternEditor {
                 PatternEvent::Right => self.sel_x += 1,
                 PatternEvent::Enter => todo!(),
                 PatternEvent::Quit => { let _ = self.par_tx.send(TrackerCmd::FocusComponent(None)); },
+                PatternEvent::SmallIncrement => {
+                    match ch {
+                        Some(channel) => {
+                            let beat = &mut self.current_pattern_mut()[channel+1][sel_beat];
+                            match lane_kind {
+                                LaneKind::Note => {
+                                    let found = beat.cmd_list.iter_mut().rev().find_map(|c| match c {
+                                        ChannelCmd::Note(n) => {
+                                            *n = n.saturating_add(1).min(127); Some(())
+                                        }
+                                        _ => None,
+                                    });
+                                    if found.is_none() {
+                                        beat.cmd_list.push(ChannelCmd::Note(MidiNote::C4 as u8));
+                                    }
+                                }
+                                LaneKind::Vol => todo!(),
+                                _ => { println!("wrong col!") }
+                            }
+                        },
+                        None => {},
+                    }
+                }
+                PatternEvent::SmallDecrement => todo!(),
             }
         }
     }

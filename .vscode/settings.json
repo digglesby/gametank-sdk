@@ -7,6 +7,7 @@
         "audio/Cargo.toml",
         "tools/gtld/Cargo.toml",
         "tools/gtrom/Cargo.toml",
-        "tools/gtgo/Cargo.toml"
+        "tools/gtgo/Cargo.toml",
+        "tools/gte/Cargo.toml"
     ]
 }

@@ -3,10 +3,11 @@ mod midi;
 pub mod lane;
 
 use crossbeam_channel::{Receiver, Sender};
+use indexmap::IndexMap;
 use rat_widget::{list::selection::RowSelection, table::{selection::CellSelection, textdata::{Cell, Row}, Table, TableData, TableDataIter, TableState}};
 use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers}, layout::{Alignment, Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style, Stylize}, text::{Line, Span}, widgets::{Block, Borders, Paragraph, Widget}};
 
-use crate::{helpers::SCHEME, main_menu::MainMenu, tracker::pattern_editor::PatternEditor, Component, GlobalEvent};
+use crate::{helpers::SCHEME, main_menu::MainMenu, tracker::{midi::MidiNote, pattern_editor::PatternEditor}, Component, GlobalEvent};
 
 pub struct Handler {
     pub event: Event,
@@ -37,14 +38,38 @@ fn empty_pattern() -> Pattern {
     std::array::from_fn(|_| std::array::from_fn(|_| Beat::default()))
 }
 
-#[derive(Default, Clone)]
+pub enum VoiceOpKind {
+    Tremolo,
+    Vibrato,
+    Note,
+    Wavetable,
+}
+
+pub enum VoiceOp {
+    Tremolo(u8, u8), // volume
+    Vibrato(u8, u8), // pitch
+    Wavetable(u16), // set wavetable
+    Phase(u16), // set phase
+    Note(u8), // set note (freq)
+    Volume(u8), // volume index (0..=16)
+    SlideVol(u8, i16), // how many beats, delta
+    StopVSlide,
+    SlidePitch(u8, i16), // how many beats, delta
+    StopPSlide,
+}
+
+pub struct VoiceBeat {
+    // idk: IndexMap<>,
+}
+
+#[derive(Debug, Default, Clone)]
 pub struct Beat {
     cmd_list: Vec<ChannelCmd>,
     sqc_list: Vec<SequencerCmd>
 }
 
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum SequencerCmd {
     Tempo(u8), // 0 - 256 in bpm. 60hz * 60s = 3600 / tempo = tick counter.
     Load(u8, u16), // load a wavetable from a pointer?
@@ -54,8 +79,14 @@ pub enum SequencerCmd {
     Stop, // stops the sequencer
 }
 
+pub enum ChannelFx {
+    Tremolo(u8, u8),
+    Vibrato(u8, u8),
+    
+}
 
-#[derive(Clone)]
+
+#[derive(Debug, Clone)]
 pub enum ChannelCmd {
     Tremolo(u8, u8), // volume
     Vibrato(u8, u8), // pitch

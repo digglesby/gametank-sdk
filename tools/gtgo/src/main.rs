@@ -3,6 +3,8 @@ pub mod helpers;
 pub mod ui;
 pub mod tracker;
 
+use std::{thread::sleep, time::Duration};
+
 use ratatui::{crossterm::event::Event, layout::Rect, DefaultTerminal, Frame};
 use anyhow::{bail, Ok, Result};
 use crossbeam_channel::unbounded;
@@ -59,8 +61,13 @@ fn run(terminal: DefaultTerminal) -> Result<()> {
         state: Box::new(MainMenu::init(tx)),
         rx,
     };
+
+    // Drain any pending terminal input (for example a newline from launching via a
+    // shell) so the first update() call doesn't see stale key events.
+    let _ = poll_events();
     
     loop {
+        sleep(Duration::from_millis(16));
         app.run()?
     }
 }

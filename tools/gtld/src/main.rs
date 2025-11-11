@@ -68,6 +68,7 @@ fn select_port() -> anyhow::Result<String> {
             port.port_name.contains("USB")
                 || port.port_name.contains("COM")
                 || port.port_name.contains("usb")
+                || port.port_name.contains("ACM")
         })
         .collect::<Vec<&SerialPortInfo>>();
 
@@ -104,7 +105,7 @@ fn get_port() -> anyhow::Result<Box<dyn SerialPort>> {
         .timeout(Duration::from_millis(20000))
         .open()
         .expect("Failed to open port");
-
+      
     Ok(port)
 }
 
@@ -126,7 +127,7 @@ fn load_rom(port: &mut Box<dyn SerialPort>, file: Option<String>) -> anyhow::Res
     Ok("go check it".to_string())
 }
 
-pub fn read_output(port: &mut Box<dyn SerialPort>) {
+pub fn read_output(port: &mut Box<dyn SerialPort>) -> [u8; 1024] {
     // Read whatever's there
     let mut buf = [0u8; 1024];
     match port.read(&mut buf) {
@@ -141,6 +142,8 @@ pub fn read_output(port: &mut Box<dyn SerialPort>) {
         _ => panic!("Waited too long for output"),
     }
     port.flush().ok();
+
+    buf
 }
 
 pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
@@ -158,7 +161,7 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
         let chunk_end = chunk_start + 4096;
 
         // Send the header alone
-        let header = format!("writeMulti {:X} 1000\r", chunk_start);
+        let header = format!("writeMulti {:X} 400\r", chunk_start);
         port.write_all(header.as_bytes())
             .expect("write header failed");
         port.flush().ok();
@@ -253,12 +256,19 @@ pub fn flash_optiboot_da(port: &str, firmware_path: &str) {
 }
 
 pub fn dump(port: &mut Box<dyn SerialPort>) {
-    let mut buf = [0u8; 4096 * 4];
-    port.write_all(b"dump\r").unwrap();
-    port.flush().ok();
+    let mut data = Vec::<[u8; 1024]>::new();
 
-    port.read_exact(&mut buf).unwrap();
-    println!("{:?}", &buf);
+    read_output(port);
+
+    for bank in 0..128*4 {
+        let dump_cmd = format!("dump {:04X} 1000\r", bank * 4096);
+        port.write_all(dump_cmd.as_bytes()).expect("dump failed");
+        port.flush().ok();
+        let pt = read_output(port);
+        data.push(pt);
+    }
+
+    read_output(port);
 }
 
 pub fn write_all(port: &mut Box<dyn SerialPort>, data: Vec<u8>) {

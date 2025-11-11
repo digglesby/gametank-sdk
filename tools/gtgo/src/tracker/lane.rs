@@ -1,6 +1,6 @@
 
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum LaneKind {
     Beat,
     Seq,
