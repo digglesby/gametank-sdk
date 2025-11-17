@@ -78,6 +78,30 @@ const LATCH: u8 = 0b0000_0100; // PA2: Latch signal
 
 // VIA array indices
 const BEFORE: usize = 0;
+
+/// Reverse the bits in a u8 value (hardware bug workaround)
+const fn reverse_bits(mut value: u8) -> u8 {
+    let mut result = 0u8;
+    let mut i = 0;
+    while i < 8 {
+        result = (result << 1) | (value & 1);
+        value >>= 1;
+        i += 1;
+    }
+    result
+}
+
+/// Reverse only the lower 7 bits (for bank addressing, 0-127)
+const fn reverse_bank_bits(mut value: u8) -> u8 {
+    let mut result = 0u8;
+    let mut i = 0;
+    while i < 7 {
+        result = (result << 1) | (value & 1);
+        value >>= 1;
+        i += 1;
+    }
+    result
+}
 const AFTER: usize = 1;
 
 /// Represents a single flash memory write operation
@@ -386,8 +410,21 @@ impl Cartridge2M {
 impl Cartridge for Cartridge2M {
     fn from_slice(slice: &[u8]) -> Self {
         let mut data = Box::new([0u8; TOTAL_SIZE]);
-        let copy_len = slice.len().min(TOTAL_SIZE);
-        data[..copy_len].copy_from_slice(&slice[..copy_len]);
+        
+        // Copy data bank by bank, reversing the bank numbers to match hardware bug
+        let num_banks = (slice.len() + BANK_SIZE - 1) / BANK_SIZE;
+        for logical_bank in 0..num_banks {
+            let physical_bank = reverse_bank_bits(logical_bank as u8) as usize;
+            
+            let src_start = logical_bank * BANK_SIZE;
+            let src_end = (src_start + BANK_SIZE).min(slice.len());
+            let dst_range = Self::bank_range(physical_bank);
+            
+            let copy_len = src_end - src_start;
+            data[dst_range.start..dst_range.start + copy_len]
+                .copy_from_slice(&slice[src_start..src_end]);
+        }
+        
         Self {
             data,
             bank_shifter: 0,
@@ -435,7 +472,8 @@ impl Cartridge for Cartridge2M {
             }
             PaEvent::LatchRisingEdge => {
                 // Latch the accumulated bank value on latch rising edge
-                self.bank_mask = self.bank_shifter;
+                // Reverse bits to correct hardware bug where bank pins were reversed
+                self.bank_mask = reverse_bank_bits(self.bank_shifter);
             }
             PaEvent::None => {}
         }
