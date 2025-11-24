@@ -5,6 +5,10 @@ edition = "2024"
 description = "gametank rom management tool"
 license = "MIT"
 
+# Exclude from cargo-dist releases
+[package.metadata.dist]
+dist = false
+
 [dependencies]
 clap = { version = "4.5.45", features = ["derive"] }
 elf = "0.8.0"

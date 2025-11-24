@@ -5,6 +5,10 @@ edition = "2024"
 description = "gametank go! the premiere tui toolkit for gametank development"
 license = "MIT"
 
+# Exclude from cargo-dist releases
+[package.metadata.dist]
+dist = false
+
 [dependencies]
 ratatui = "0.29.0"
 rat-widget = "1.0.5"

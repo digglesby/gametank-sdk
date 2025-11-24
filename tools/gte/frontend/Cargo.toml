@@ -5,6 +5,10 @@ edition = "2021"
 description = "gametank emulator"
 license = "MIT"
 
+# Exclude from cargo-dist releases
+[package.metadata.dist]
+dist = false
+
 [profile.release]
 lto = true
 
