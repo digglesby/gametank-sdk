@@ -9,9 +9,6 @@ license = "MIT"
 [package.metadata.dist]
 dist = false
 
-[profile.release]
-lto = true
-
 [dependencies]
 gte-core = { path = "../core" }
 
