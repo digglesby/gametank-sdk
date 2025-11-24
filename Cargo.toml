@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "tools/gtld",
+    "tools/gtgo",
+    "tools/gtrom",
+    "tools/gte/core",
+    "tools/gte/core/gte-acp",
+    "tools/gte/core/gte-w65c02s",
+    "tools/gte/frontend",
+    "tools/gte/libretro",
+]
