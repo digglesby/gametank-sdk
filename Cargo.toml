@@ -12,6 +12,11 @@ members = [
     "tools/gte/libretro",
 ]
 
+exclude = [
+    "sdk/audio",
+    "sdk/rom",
+]
+
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Conditions for После update is run)
