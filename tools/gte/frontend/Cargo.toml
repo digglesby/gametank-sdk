@@ -2,6 +2,7 @@
 name = "gte"
 version = "0.2.2"
 edition = "2021"
+repository = "https://github.com/dwbrite/gametank-sdk"
 description = "gametank emulator"
 license = "MIT"
 authors = ["Devin Brite <dwbrite@gmail.com>"]
