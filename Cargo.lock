@@ -1840,7 +1840,7 @@ dependencies = [
 
 [[package]]
 name = "gtrom"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap 4.5.53",
  "elf",
