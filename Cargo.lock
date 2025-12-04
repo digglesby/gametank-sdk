@@ -1847,6 +1847,7 @@ dependencies = [
  "flate2",
  "rustc-demangle",
  "tar",
+ "tempfile",
 ]
 
 [[package]]

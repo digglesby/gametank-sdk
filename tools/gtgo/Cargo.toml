@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 description = "gametank go! the premiere tui toolkit for gametank development"
 license = "MIT"
+authors = ["Devin Brite <dwbrite@gmail.com>"]
+homepage = "https://github.com/dwbrite/gametank-sdk"
+repository = "https://github.com/dwbrite/gametank-sdk"
 
 # Exclude from cargo-dist releases
 [package.metadata.dist]

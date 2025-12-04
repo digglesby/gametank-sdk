@@ -18,7 +18,7 @@ license = false
 eula = false
 
 [dependencies]
-gte-core = { path = "../core" }
+gte-core = { path = "../core", version = "0.1.2" }
 
 # app shit
 winit = { version = "0.30", features = ["rwh_06"] }

@@ -3,6 +3,10 @@
 
 pre-release-hook = ["tar", "-czf", "sdk-template.tar.gz", "-C", "../..", "--exclude=*/target", "--exclude=*.gtr", "sdk"]
 
+# Tag format for workspace member
+tag-prefix = "gtrom-"
+tag-name = "{{prefix}}v{{version}}"
+
 # Let cargo-dist handle GitHub releases
 push = true
 tag = true

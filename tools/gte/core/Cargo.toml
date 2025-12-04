@@ -4,11 +4,14 @@ version = "0.1.2"
 edition = "2021"
 description = "Core of the GameTank Rust Emulator"
 license = "MIT"
+authors = ["Devin Brite <dwbrite@gmail.com>"]
+homepage = "https://github.com/dwbrite/gametank-sdk"
+repository = "https://github.com/dwbrite/gametank-sdk"
 
 [dependencies]
 # emulation
-gte-w65c02s = { path = "gte-w65c02s" }
-gte-acp = { path = "gte-acp" }
+gte-w65c02s = { path = "gte-w65c02s", version = "0.9.3" }
+gte-acp = { path = "gte-acp", version = "0.1.0" }
 
 rand = { version = "0.8", default-features = false, features = ["alloc"] }
 rand_core = { version = "0.6", default-features = false }
