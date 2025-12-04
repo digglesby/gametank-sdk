@@ -6,7 +6,7 @@
         "Cargo.toml",
         "sdk/rom/Cargo.toml",
         "sdk/audiofw-src/Cargo.toml",
-        "sdk/examples/bouncing-balls/Cargo.toml",
+        "examples/bouncing-balls/Cargo.toml",
         "tools/gtld/Cargo.toml",
         "tools/gtrom/Cargo.toml",
         "tools/gtgo/Cargo.toml",
