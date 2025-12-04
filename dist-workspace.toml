@@ -21,6 +21,8 @@ install-updater = false
 tap = "dwbrite/tap"
 # Publish jobs to run in CI
 publish-jobs = ["homebrew"]
+# Merge all binaries into a single installer
+merge-tasks = true
 
 # System dependencies for Linux builds
 [dist.dependencies.apt]
