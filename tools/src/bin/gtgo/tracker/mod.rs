@@ -3,11 +3,9 @@ mod midi;
 pub mod lane;
 
 use crossbeam_channel::{Receiver, Sender};
-use indexmap::IndexMap;
-use rat_widget::{list::selection::RowSelection, table::{selection::CellSelection, textdata::{Cell, Row}, Table, TableData, TableDataIter, TableState}};
-use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers}, layout::{Alignment, Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style, Stylize}, text::{Line, Span}, widgets::{Block, Borders, Paragraph, Widget}};
+use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers}, layout::{Alignment, Constraint, Direction, Layout, Rect}, style::Stylize, widgets::{Block, Borders}};
 
-use crate::{helpers::SCHEME, main_menu::MainMenu, tracker::{midi::MidiNote, pattern_editor::PatternEditor}, Component, GlobalEvent};
+use crate::{helpers::SCHEME, main_menu::MainMenu, tracker::pattern_editor::PatternEditor, Component, GlobalEvent};
 
 pub struct Handler {
     pub event: Event,
@@ -102,6 +100,7 @@ pub enum ChannelCmd {
 
 
 
+#[allow(dead_code)]
 pub struct TrackerData {
     beat: u8,
     pattern: u8,
@@ -113,6 +112,7 @@ pub struct TrackerData {
 
 pub struct Tracker {
     tx_main: Sender<GlobalEvent>,
+    #[allow(dead_code)]
     tr_tx: Sender<TrackerCmd>,
     tr_rx: Receiver<TrackerCmd>,
 
@@ -123,7 +123,6 @@ pub struct Tracker {
 
 pub fn tx_handler(tx: &Sender<TrackerCmd>, code: KeyCode, cmd: TrackerCmd) -> Handler {
     let txx = tx.clone();
-    let cmd = cmd.clone();
     Handler { event: Event::Key(KeyEvent::new(code, KeyModifiers::NONE)), action: Box::new(move || {
         let _ = txx.send(cmd);
     })}
@@ -133,7 +132,7 @@ impl Tracker {
     pub fn init(tx_main: Sender<GlobalEvent>) -> Self {
         let (tr_tx, tr_rx) = crossbeam_channel::unbounded();
 
-        let mut subcomponents: Vec<Box<dyn TSub>> = vec![
+        let subcomponents: Vec<Box<dyn TSub>> = vec![
             Box::new(PatternEditor::init(tr_tx.clone())),
         ];
 
@@ -166,7 +165,7 @@ impl Component for Tracker {
                 }
             }
 
-            for h in self.subcomponents.iter().map(|c| c.global_handlers()).flatten() {
+            for h in self.subcomponents.iter().flat_map(|c| c.global_handlers()) {
                 if h.event == *e {
                     (h.action)()
                 }
@@ -190,7 +189,7 @@ impl Component for Tracker {
         }
     }
 
-    fn render(&mut self, frame: &mut ratatui::Frame, area: Rect) {
+    fn render(&mut self, frame: &mut ratatui::Frame, _area: Rect) {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![

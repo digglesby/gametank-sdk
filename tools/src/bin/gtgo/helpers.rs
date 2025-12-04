@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use rat_theme::Scheme;
 use ratatui::{crossterm::event::{self, Event}, layout::{Constraint, Direction, Layout, Rect}};
 
 pub fn centered_rect(pct_x: u16, pct_y: u16, area: Rect) -> Rect {

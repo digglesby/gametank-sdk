@@ -7,7 +7,6 @@ use std::{thread::sleep, time::Duration};
 
 use ratatui::{crossterm::event::Event, layout::Rect, DefaultTerminal, Frame};
 use anyhow::{bail, Ok, Result};
-use crossbeam_channel::unbounded;
 
 use crate::{helpers::poll_events, main_menu::MainMenu};
 

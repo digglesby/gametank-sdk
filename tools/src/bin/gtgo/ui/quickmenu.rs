@@ -1,10 +1,8 @@
-use std::{collections::HashMap, rc::Rc, time::Duration};
+use std::{collections::HashMap, rc::Rc};
 
-use crossbeam_channel::select;
-use rat_widget::menu::{popup_menu, PopupMenu, PopupMenuState};
-use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent}, layout::{Alignment, Rect}, style::{Color, Modifier, Style, Stylize}, symbols::border::{self}, text::{Line, Span, Text}, widgets::{block::Position, Block, BorderType, List, ListDirection, ListState, Padding, StatefulWidget}, Frame};
+use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent}, layout::Rect, style::{Color, Modifier, Style, Stylize}, symbols::border, text::{Line, Span, Text}, widgets::{Block, BorderType, List, ListState, Padding}, Frame};
 
-use crate::{helpers::{centered_rect, SCHEME}, Component};
+use crate::{helpers::SCHEME, Component};
 
 pub struct QmItem {
     label: &'static str,
@@ -159,8 +157,6 @@ impl Component for QuickMenu {
     }
 
     fn update(&mut self, events: Vec<Event>) {
-        let max = self.list_items.len() - 1;
-
         for e in events {
             match e {
                 Event::Key(KeyEvent { code, .. }) if self.bound_keys.contains_key(&code) => {

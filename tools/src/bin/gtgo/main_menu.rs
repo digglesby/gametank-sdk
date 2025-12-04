@@ -1,11 +1,9 @@
-use std::{rc::Rc, time::Duration};
-
 use crossbeam_channel::Sender;
-use rat_widget::menu::{popup_menu, PopupMenu, PopupMenuState};
-use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent}, layout::{Alignment, Rect}, style::{Color, Modifier, Style, Stylize}, symbols::border::{self}, widgets::{block::Position, Block, List, ListDirection, ListState, Widget}, Frame};
+use ratatui::{crossterm::event::Event, layout::Rect, style::{Color, Stylize}, symbols::border, widgets::{Block, Widget}, Frame};
 
-use crate::{helpers::{centered_rect, SCHEME}, tracker::Tracker, ui::quickmenu::{qi, QuickMenu}, Component, GlobalEvent};
+use crate::{helpers::SCHEME, tracker::Tracker, ui::quickmenu::{qi, QuickMenu}, Component, GlobalEvent};
 
+#[allow(dead_code)]
 pub struct MainMenu {
     has_podman: bool,
     quit: bool,

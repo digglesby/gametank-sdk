@@ -1,8 +1,8 @@
 use crossbeam_channel::{Receiver, Sender};
 use rat_widget::table::{selection::RowSelection, textdata::{Cell, Row}, Table, TableData, TableState};
-use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers}, layout::{Constraint, Direction, Layout, Rect}, style::{palette::tailwind::Palette, Modifier, Style, Styled, Stylize}, text::{Line, Span}, widgets::{Block, Widget}};
+use ratatui::{crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers}, layout::{Constraint, Direction, Layout, Rect}, style::{Modifier, Style, Stylize}, text::{Line, Span}, widgets::Widget};
 
-use crate::{helpers::SCHEME, tracker::{empty_pattern, lane::{self, Lane, LaneKind}, midi::{self, MidiNote}, Beat, ChannelCmd, Handler, Pattern, TSub, TrackerCmd, TrackerData}, Component};
+use crate::{helpers::SCHEME, tracker::{empty_pattern, lane::{Lane, LaneKind}, midi::MidiNote, Beat, ChannelCmd, Handler, Pattern, TSub, TrackerCmd, TrackerData}, Component};
 
 #[derive(Clone, Copy)]
 pub enum PatternEvent {
@@ -26,6 +26,7 @@ pub struct PatternEditor {
     active_handlers: Vec<Handler>,
     global_handlers: Vec<Handler>,
     cx_rx: Receiver<PatternEvent>,
+    #[allow(dead_code)]
     cx_tx: Sender<PatternEvent>,
     par_tx: Sender<TrackerCmd>,
 }
@@ -123,12 +124,12 @@ impl PatternEditor {
 
         match lane.kind {
             LaneKind::Beat => {
-                return CellDisplay::BeatNum(ym64);
+                CellDisplay::BeatNum(ym64)
             },
             LaneKind::Seq => {
                 let beat = Self::get_channel_beat(lane.ch, ym64, pattern);
-                let ct = beat.sqc_list.iter().count();
-                return CellDisplay::SeqCmds(ct);
+                let ct = beat.sqc_list.len();
+                CellDisplay::SeqCmds(ct)
             },
             LaneKind::Note => {
                 let beat = Self::get_channel_beat(lane.ch, ym64, pattern);
@@ -136,7 +137,7 @@ impl PatternEditor {
                     ChannelCmd::Note(num) => Some(MidiNote::from(*num)),
                     _ => None,
                 }).unwrap_or(MidiNote::None);
-                return CellDisplay::Note(note);
+                CellDisplay::Note(note)
             },
             LaneKind::Vol => {
                 let beat = Self::get_channel_beat(lane.ch, ym64, pattern);
@@ -144,7 +145,7 @@ impl PatternEditor {
                         ChannelCmd::Volume(v) => Some(*v),
                         _ => None,
                     });
-                return CellDisplay::Vol(vol);
+                CellDisplay::Vol(vol)
             }
             LaneKind::Fx => {
                 let beat = Self::get_channel_beat(lane.ch, ym64, pattern);
@@ -152,7 +153,7 @@ impl PatternEditor {
                     !matches!(c, ChannelCmd::Note(_) | ChannelCmd::Volume(_)))
                     .count()
                     .min(0xF) as u8;
-                return CellDisplay::Fx(n);
+                CellDisplay::Fx(n)
             }
         }
     }
@@ -198,17 +199,17 @@ impl <'a> TableData<'a> for &mut PatternEditor {
 
     fn render_cell(
         &self,
-        ctx: &rat_widget::table::TableContext,
+        _ctx: &rat_widget::table::TableContext,
         column: usize,
         row: usize,
         area: ratatui::prelude::Rect,
         buf: &mut ratatui::prelude::Buffer,
     ) {
         let lane = &self.lanes[column].clone();
-        let offset = (row as i8 + self.scroll);
+        let offset = row as i8 + self.scroll;
 
-        let row_even = row % 2 == 0;
-        let is_active = offset >= 0 && offset < 64;
+        let row_even = offset % 2 == 0;
+        let is_active = (0..64).contains(&offset);
         let row_selected = row == (self.sel_y as i8 - self.scroll) as usize;
         let col_selected = column == self.sel_x as usize;
 
@@ -220,15 +221,13 @@ impl <'a> TableData<'a> for &mut PatternEditor {
             } else {
                 CellStyle::SelectedRow
             }
+        } else if row_even {
+            CellStyle::EvenRow
         } else {
-            if row_even {
-                CellStyle::EvenRow
-            } else {
-                CellStyle::OddRow
-            }
+            CellStyle::OddRow
         };
 
-        let mut spans = cell.spans(lane, style, is_active);
+        let spans = cell.spans(lane, style, is_active);
 
         let line = Line::from(spans);
         line.render(area, buf);
@@ -257,7 +256,7 @@ impl CellDisplay {
         match self {
             CellDisplay::BeatNum(beat) => format!("   {:02X}", beat),
             CellDisplay::SeqCmds(n) => match n {
-                0 => format!("---"),
+                0 => "---".to_string(),
                 n => format!("[{:1x}]", n),
             },
             CellDisplay::Note(midi_note) => midi_note.to_string(),
@@ -266,7 +265,7 @@ impl CellDisplay {
                 None => "-".to_string(),
             },
             CellDisplay::Fx(n) => match n {
-                0 => format!("---"),
+                0 => "---".to_string(),
                 n => format!("[{:1x}]", n),
             }
         }
@@ -288,7 +287,7 @@ impl CellDisplay {
             }, Modifier::empty()),
             CellDisplay::Vol(v) => (match v {
                 None => SCHEME.gray[0],
-                Some(v) => SCHEME.magenta[0],
+                Some(_) => SCHEME.magenta[0],
             }, Modifier::empty()),
             CellDisplay::Fx(n) => (match n {
                 0 => SCHEME.gray[0],
@@ -341,7 +340,7 @@ impl CellDisplay {
 }
 
 impl Component for PatternEditor {
-    fn update(&mut self, events: Vec<Event>) {
+    fn update(&mut self, _events: Vec<Event>) {
         let (lane_kind, ch) = {
             let lane = &self.lanes[self.sel_x as usize];
             let kind = lane.kind;
@@ -359,26 +358,23 @@ impl Component for PatternEditor {
                 PatternEvent::Enter => todo!(),
                 PatternEvent::Quit => { let _ = self.par_tx.send(TrackerCmd::FocusComponent(None)); },
                 PatternEvent::SmallIncrement => {
-                    match ch {
-                        Some(channel) => {
-                            let beat = &mut self.current_pattern_mut()[channel+1][sel_beat];
-                            match lane_kind {
-                                LaneKind::Note => {
-                                    let found = beat.cmd_list.iter_mut().rev().find_map(|c| match c {
-                                        ChannelCmd::Note(n) => {
-                                            *n = n.saturating_add(1).min(127); Some(())
-                                        }
-                                        _ => None,
-                                    });
-                                    if found.is_none() {
-                                        beat.cmd_list.push(ChannelCmd::Note(MidiNote::C4 as u8));
+                    if let Some(channel) = ch {
+                        let beat = &mut self.current_pattern_mut()[channel+1][sel_beat];
+                        match lane_kind {
+                            LaneKind::Note => {
+                                let found = beat.cmd_list.iter_mut().rev().find_map(|c| match c {
+                                    ChannelCmd::Note(n) => {
+                                        *n = n.saturating_add(1).min(127); Some(())
                                     }
+                                    _ => None,
+                                });
+                                if found.is_none() {
+                                    beat.cmd_list.push(ChannelCmd::Note(MidiNote::C4 as u8));
                                 }
-                                LaneKind::Vol => todo!(),
-                                _ => { println!("wrong col!") }
                             }
-                        },
-                        None => {},
+                            LaneKind::Vol => todo!(),
+                            _ => { println!("wrong col!") }
+                        }
                     }
                 }
                 PatternEvent::SmallDecrement => todo!(),

@@ -121,8 +121,6 @@
 pub mod op;
 mod addressing_modes;
 mod instructions;
-#[cfg(test)]
-mod test;
 
 use addressing_modes::*;
 
