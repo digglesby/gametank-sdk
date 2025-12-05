@@ -1,3 +1,39 @@
+//! # VIA - ROM Banking
+//!
+//! The VIA handles ROM bank switching for accessing the 2MB cartridge ROM.
+//!
+//! ## ROM Banking
+//!
+//! The GameTank has 2MB of ROM divided into 128 banks (0-127), each 16KB.
+//! Bank 127 is always visible at `$C000-$FFFF` (where your main code lives).
+//! Use the VIA to switch which bank appears at `$8000-$BFFF`:
+//!
+//! ```ignore
+//! let via = unsafe { Via::new() };
+//!
+//! // Switch to bank 10 to access data there
+//! via.change_rom_bank(10);
+//!
+//! // Now data in bank 10 is accessible
+//! ```
+//!
+//! ## Placing Data in Banks
+//!
+//! Use link sections to put data in specific banks:
+//!
+//! ```ignore
+//! // This array will be in ROM bank 10
+//! #[unsafe(link_section = ".rodata.bank10")]
+//! static LEVEL_DATA: [u8; 8192] = include_bytes!("level1.bin");
+//!
+//! // Switch to bank 10 before accessing
+//! via.change_rom_bank(10);
+//! let first_byte = LEVEL_DATA[0];  // Now accessible!
+//! ```
+//!
+//! **Tip for future carts:** Use banks 128-255 instead of 0-127 for compatibility
+//! with battery-backed RAM cartridges (they use bit 7 to select RAM vs ROM).
+
 use bit_field::BitField;
 use volatile_register::{RW, WO};
 

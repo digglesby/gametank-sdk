@@ -64,6 +64,7 @@ elf = "0.8.0"
 rustc-demangle = "0.1.26"
 flate2 = "1"
 tar = "0.4"
+open = "5"
 
 # gtgo dependencies
 ratatui = "0.29.0"

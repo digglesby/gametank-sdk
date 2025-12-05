@@ -1,3 +1,53 @@
+//! # Console & System Control
+//!
+//! The [`Console`] struct is your main interface to the GameTank hardware.
+//! Your `main` function receives one, fully initialized:
+//!
+//! ```ignore
+//! #[unsafe(no_mangle)]
+//! fn main(mut console: Console) {
+//!     // console.dma   - draw graphics (blitter, framebuffers, sprites)
+//!     // console.sc    - system control (audio enable, etc.)
+//!     // console.audio - 4KB audio RAM for synth data
+//! }
+//! ```
+//!
+//! ## What's in Console?
+//!
+//! | Field | Type | Use For |
+//! |-------|------|---------|
+//! | `dma` | [`DmaManager`] | Drawing! Get blitter, flip framebuffers, load sprites |
+//! | `sc` | [`SystemControl`] | Audio enable, fill mode (rarely used directly) |
+//! | `audio` | `&mut [u8; 4096]` | Audio RAM - copy firmware here, then voice data |
+//!
+//! ## Common Operations
+//!
+//! ```ignore
+//! // Drawing
+//! let mut blitter = console.dma.blitter(&mut console.sc).unwrap();
+//! blitter.draw_square(&mut console.sc, x, y, w, h, !color);
+//! blitter.wait_blit();
+//!
+//! // Double buffering
+//! console.dma.framebuffers(&mut console.sc).unwrap().flip(&mut console.sc);
+//!
+//! // Audio setup
+//! console.audio.copy_from_slice(&audio::FIRMWARE);
+//! console.sc.set_audio(0xFF);  // Enable at ~14kHz
+//! ```
+//!
+//! ## Advanced: Video Flags
+//!
+//! These are managed automatically by the SDK, but here's what they do:
+//!
+//! | Flag              | Effect                                           |
+//! |-------------------|--------------------------------------------------|
+//! | `DMA_ENABLE`      | Blitter active (1) vs CPU video access (0)       |
+//! | `DMA_PAGE_OUT`    | Which framebuffer goes to the TV                 |
+//! | `DMA_COLORFILL`   | Fill with color (1) vs copy sprites (0)          |
+//! | `DMA_OPAQUE`      | Draw all pixels (1) vs skip color 0 (0)          |
+//! | `DMA_GCARRY`      | Allow sprites > 16×16 (usually on)               |
+
 use bit_field::BitField;
 use bitflags::Bits;
 use bitflags::{self, Flags};
@@ -11,18 +61,35 @@ use crate::sdk::video_dma::spritemem::SpriteMem;
 use crate::sdk::video_dma::{DmaManager, VideoDma};
 
 bitflags::bitflags! {
+    /// Video/Blitter control flags at `$2007`.
+    ///
+    /// These flags control the blitter's behavior and video output mode.
+    /// Most are managed automatically by the SDK's DMA system.
     #[derive(Copy, Clone)]
     pub struct VideoFlags: u8 {
+        /// Enable blitter DMA. When set, `$4000-$7FFF` maps to blitter registers.
+        /// When clear, CPU can access video memory directly.
         const DMA_ENABLE           = 0b0000_0001;
+        /// Select which framebuffer is displayed on screen.
+        /// Toggle this each frame for double buffering.
         const DMA_PAGE_OUT        = 0b0000_0010;
+        /// Enable NMI interrupt on vertical blank.
         const DMA_NMI             = 0b0000_0100;
+        /// Blitter fill mode: set for color fill, clear for sprite copy.
         const DMA_COLORFILL       = 0b0000_1000;
+        /// Graphics carry - enables smooth scrolling across sprite boundaries.
         const DMA_GCARRY          = 0b0001_0000;
+        /// CPU video access mode: set for framebuffer, clear for sprite RAM.
         const DMA_CPU_TO_VRAM     = 0b0010_0000;
+        /// Enable IRQ interrupt when blitter completes.
         const DMA_IRQ             = 0b0100_0000;
+        /// Sprite transparency: set for opaque, clear to treat color 0 as transparent.
         const DMA_OPAQUE          = 0b1000_0000;
     }
 
+    /// Banking control flags at `$2005`.
+    ///
+    /// Controls sprite RAM page selection, framebuffer access, and clipping.
     #[derive(Copy, Clone)]
     pub struct BankFlags: u8 {
         // Bits 0-2: Sprite RAM page (0–7)
@@ -52,34 +119,33 @@ bitflags::bitflags! {
     }
 }
 
-// #[repr(C, packed)]
-// pub struct Bcr {
-//     pub fb_x: WO<u8>,
-//     pub fb_y: WO<u8>,
-//     pub vram_x: WO<u8>,
-//     pub vram_y: WO<u8>,
-//     pub width: WO<u8>,
-//     pub height: WO<u8>,
-//     pub start: WO<u8>,
-//     pub color: WO<u8>,
-// }
-
-/// System Control Register
-/// $2000 	Write 1 to reset audio coprocessor
-/// $2001 	Write 1 to send NMI to audio coprocessor
-/// $2005 	Banking Register
-/// $2006 	Audio enable and sample rate
-/// $2007 	Video/Blitter Flags
+/// System Control Register hardware layout at `$2000-$2007`.
+///
+/// | Address | Name        | Description                              |
+/// |---------|-------------|------------------------------------------|
+/// | `$2000` | audio_reset | Write 1 to reset Audio Coprocessor       |
+/// | `$2001` | audio_nmi   | Write 1 to send NMI to Audio Coprocessor |
+/// | `$2005` | banking     | Banking control ([`BankFlags`])          |
+/// | `$2006` | audio_reg   | Audio enable and sample rate             |
+/// | `$2007` | video_reg   | Video/Blitter flags ([`VideoFlags`])     |
+///
+/// You typically don't access this directly; use [`SystemControl`] instead.
 #[repr(C, packed)]
 pub struct Scr {
+    /// Write 1 to reset the Audio Coprocessor.
     pub audio_reset: u8,
+    /// Write 1 to trigger an NMI on the Audio Coprocessor.
     pub audio_nmi: u8,
     _pad0: [u8; 3], // Skips to $2005
+    /// Banking control register.
     pub banking: BankFlags,
+    /// Audio enable and sample rate. Write `0xFF` for ~14kHz playback.
     pub audio_reg: u8,
+    /// Video and blitter control flags.
     pub video_reg: VideoFlags,
 }
 
+/// Mirror of SCR in zero page for fast read-modify-write operations.
 #[used]
 #[unsafe(link_section = ".data.zp")]
 pub static mut SCR_MIR: Scr = Scr {
@@ -91,12 +157,22 @@ pub static mut SCR_MIR: Scr = Scr {
     video_reg: VideoFlags::empty(),
 };
 
+/// Safe wrapper around the System Control Register.
+///
+/// Manages the hardware SCR at `$2000` along with a zero-page mirror for
+/// efficient read-modify-write operations. The SDK handles keeping these in sync.
+///
+/// Most operations go through [`Console`] rather than accessing this directly.
 pub struct SystemControl {
     pub(in crate::sdk) scr: &'static mut Scr,
     pub(in crate::sdk) mir: &'static mut Scr,
 }
 
 impl SystemControl {
+    /// Initialize the System Control Register with default settings.
+    ///
+    /// Sets up sane defaults: NMI enabled, IRQ enabled, graphics carry on,
+    /// opaque sprites, and double buffering ready.
     pub fn init() -> Self {
         unsafe {
             // mir is zeroe'd
@@ -120,7 +196,10 @@ impl SystemControl {
         }
     }
 
-    //
+    /// Set the blitter fill mode.
+    ///
+    /// - [`BlitterFillMode::Color`] - Fill rectangles with a solid color
+    /// - [`BlitterFillMode::Sprite`] - Copy from sprite RAM to framebuffer
     #[inline(always)]
     pub fn set_fill_mode(&mut self, mode: BlitterFillMode) {
         self.mir
@@ -129,20 +208,62 @@ impl SystemControl {
         self.scr.video_reg = self.mir.video_reg;
     }
 
+    /// Enable audio and set sample rate.
+    ///
+    /// Write `0xFF` to enable audio at ~14kHz (the standard rate).
+    /// Write `0x00` to disable audio.
     pub fn set_audio(&mut self, value: u8) {
         self.scr.audio_reg = value;
     }
 }
 
 
-
+/// The main entry point for GameTank programs.
+///
+/// `Console` bundles together all the hardware interfaces you need:
+/// - [`sc`](Console::sc) - System control for video/audio registers
+/// - [`dma`](Console::dma) - DMA manager for blitter and video memory access
+/// - [`audio`](Console::audio) - Direct access to the 4KB audio RAM at `$3000`
+///
+/// # Example
+///
+/// ```ignore
+/// #[unsafe(no_mangle)]
+/// fn main(mut console: Console) {
+///     // Load audio firmware
+///     console.audio.copy_from_slice(FIRMWARE);
+///     console.sc.set_audio(0xFF); // Enable at 14kHz
+///     
+///     loop {
+///         unsafe { wait(); } // Wait for vblank
+///         
+///         // Flip framebuffers for double buffering
+///         if let Some(fb) = console.dma.framebuffers(&mut console.sc) {
+///             fb.flip(&mut console.sc);
+///         }
+///         
+///         // Draw with the blitter
+///         if let Some(mut blitter) = console.dma.blitter(&mut console.sc) {
+///             blitter.draw_square(&mut console.sc, 10, 10, 16, 16, !0b111_00_000);
+///             blitter.wait_blit();
+///         }
+///     }
+/// }
+/// ```
 pub struct Console {
+    /// System control - access to video flags, audio, and banking registers.
     pub sc: SystemControl,
+    /// DMA manager - provides exclusive access to blitter, framebuffers, or sprite RAM.
     pub dma: DmaManager,
+    /// Audio RAM - 4KB shared with the Audio Coprocessor at `$3000-$3FFF`.
+    /// Copy your audio firmware here, then use it for voice/instrument data.
     pub audio: &'static mut [u8; 4096],
 }
 
 impl Console {
+    /// Initialize the console hardware.
+    ///
+    /// Called automatically by the boot code before `main()`.
     pub fn init() -> Self {
         // TODO: singleton-ize this?
         Self {

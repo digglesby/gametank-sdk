@@ -82,12 +82,43 @@ enum Commands {
         #[arg(short, long)]
         port: Option<String>,
     },
+
+    /// Build and open SDK documentation in your browser
+    Docs {},
 }
 
 /// Convert ELF to GTR
 fn convert_elf_to_gtr(elf_path: &str, output: &str) -> Result<(), String> {
     println!("Converting ELF to GTR: {} -> {}", elf_path, output);
     RomBuilder::build(elf_path.to_string(), output.to_string());
+    Ok(())
+}
+
+/// Build and open SDK documentation
+fn do_docs() -> Result<(), String> {
+    let (_working_dir, rom_dir) = find_rom_dir()?;
+    
+    println!("Building documentation...");
+    
+    let status = Command::new("cargo")
+        .args(["doc", "--document-private-items"])
+        .current_dir(&rom_dir)
+        .status()
+        .map_err(|e| format!("Failed to run cargo doc: {}", e))?;
+    
+    if !status.success() {
+        return Err("Failed to build documentation".to_string());
+    }
+    
+    // Open the SDK module docs directly
+    let doc_path = rom_dir.join("target/doc/rom/sdk/index.html");
+    if !doc_path.exists() {
+        return Err(format!("Documentation not found at {:?}", doc_path));
+    }
+    
+    println!("Opening documentation...");
+    open::that(&doc_path).map_err(|e| format!("Failed to open browser: {}", e))?;
+    
     Ok(())
 }
 
@@ -183,6 +214,10 @@ fn main() {
                     Err("Flash failed".to_string())
                 }
             })
+        }
+
+        Commands::Docs {} => {
+            do_docs()
         }
     };
 

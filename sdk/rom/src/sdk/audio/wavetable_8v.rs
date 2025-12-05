@@ -1,24 +1,46 @@
-//! wavetable-8v audio firmware interface
+//! # 8-Voice Wavetable Synthesizer
 //!
-//! This module provides a Rust interface to the 8-voice wavetable synthesizer
-//! running on the GameTank's Audio Coprocessor (ACP).
+//! This firmware provides 8 independent voices, each with:
+//! - **Note/Frequency** - MIDI notes or raw frequency values
+//! - **Volume** - 0 (silent) to 63 (max)
+//! - **Wavetable** - One of 8 waveform slots
 //!
-//! # Memory Layout (ACP side)
-//! 
-//! Each voice occupies 7 bytes starting at `VOICE_BASE = 0x0041`:
-//! 
-//! | Offset | Name     | Description                          |
-//! |--------|----------|--------------------------------------|
-//! | +0     | PHASE_L  | Phase accumulator low byte           |
-//! | +1     | PHASE_H  | Phase accumulator high byte          |
-//! | +2     | FREQ_L   | Frequency increment low byte         |
-//! | +3     | FREQ_H   | Frequency increment high byte        |
-//! | +4     | WAVEPTR_L| Wavetable pointer low byte           |
-//! | +5     | WAVEPTR_H| Wavetable pointer high byte          |
-//! | +6     | VOLUME   | Volume level (0-63)                  |
+//! ## Quick Start
 //!
-//! From the main CPU, the ACP's 4KB RAM is mapped at `0x3000`, so voices
-//! are accessed at `0x3041`.
+//! ```rust,ignore
+//! use rom::sdk::audio::{voices, MidiNote, WAVETABLE};
+//!
+//! let v = voices();
+//!
+//! // Play middle C at full volume with the first wavetable
+//! v[0].set_note(MidiNote::C4);
+//! v[0].set_volume(63);
+//! v[0].set_wavetable(WAVETABLE[0]);
+//!
+//! // Play a chord
+//! v[1].set_note(MidiNote::E4);  v[1].set_volume(50);
+//! v[2].set_note(MidiNote::G4);  v[2].set_volume(50);
+//!
+//! // Stop a voice
+//! v[0].mute();
+//! ```
+//!
+//! ## Wavetables
+//!
+//! The firmware has 8 wavetable slots. Use [`WAVETABLE`] to get slot addresses:
+//!
+//! ```rust,ignore
+//! v[0].set_wavetable(WAVETABLE[0]);  // First waveform
+//! v[1].set_wavetable(WAVETABLE[1]);  // Second waveform
+//! ```
+//!
+//! You can load custom waveforms (256 bytes each) into audio RAM:
+//!
+//! ```rust,ignore
+//! // Wavetable 0 is at $3400, wavetable 1 at $3500, etc.
+//! let my_wave: [u8; 256] = generate_sine();
+//! console.audio[0x400..0x500].copy_from_slice(&my_wave);
+//! ```
 
 use crate::sdk::audio::pitch_table::{midi_inc, MidiNote};
 

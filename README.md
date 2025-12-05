@@ -1,4 +1,4 @@
-What if Rust, on [GameTank](https://www.clydeshaffer.com/gametank/)?
+What if Rust, on [GameTank](https://gametank.zone/)?
 
 # What?
 
@@ -31,12 +31,28 @@ Bundled with the SDK are development tools:
     
 Development is done in VSCode (sry), and there's a `.vscode/settings.json` for the linked projects for rust-analyzer.
 
+## Requirements
+
+- `Podman` (or Docker, either should work, but Podman is tested and easier to set up)
+- `Rust`*
+
+> It's technically possible to make GameTank games using Rust without installing Rust at all! But you probably won't have rust-analyzer support, which isn't very fun.
+
+If you're on Windows or MacOS, you'll likely want to use Podman Desktop.
+
+See **Windows Setup** for further details on setting up Windows.
+
+## Installation
+
+```bash
+cargo install gametank-sdk
+```
+
+Or download an installer from [GitHub releases](https://github.com/dwbrite/gametank-sdk/releases).
+
 ## Quick Start
 
 ```bash
-# Install the SDK tools
-cargo install gametank-sdk
-
 # Create a new project
 gtrom init my-game
 cd my-game
@@ -50,83 +66,56 @@ gtrom run
 # Flash to cartridge
 gtrom flash
 ```
-  
 
-## Requirements
+## Editor Setup
 
+We recommend using [VS Code](https://code.visualstudio.com/) for development. New projects include a `.vscode/settings.json` for rust-analyzer.
 
-### VSCode
+**Recommended extensions:**
+- [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) - Rust language support
 
-Trust Me Bro, please use a VSCode derivative for this project, or if you're 1337 you can use *vim/emacs/
-  
+**Coming from JetBrains?** Try these to feel more at home:
+- [IntelliJ IDEA Keybindings](https://marketplace.visualstudio.com/items?itemName=k--kato.intellij-idea-keybindings)
+- [Darcula Theme](https://marketplace.visualstudio.com/items?itemName=rokoroku.vscode-theme-darcula)
 
-### Windows
+## Windows Setup
 
-Please use WSL.
+If you're not already a Rust / WSL user, here are your options:
 
-### Windows (WSL)
+### Option 1: Use Prebuilt Binaries
 
-> powershell:
+Download the `.msi` installer or PowerShell script from [GitHub releases](https://github.com/dwbrite/gametank-sdk/releases).
 
-wsl.exe --install
+You'll still need:
+- [Podman Desktop](https://podman-desktop.io/) (or Docker Desktop) for building ROMs
+- Rust installed for rust-analyzer in VS Code (see Option 3 for install steps)
 
-> turn it off an on again
+### Option 2: WSL (Recommended for Development)
 
-wsl.exe --install Ubuntu-22.04
+WSL gives you a Linux environment, which is generally smoother for development.
 
-> enter linux shell
+```powershell
+# Install WSL
+wsl --install
 
-sudo apt update
-sudo apt install podman build-essential libasound2-dev libudev-dev
-podman pull docker.io/dwbrite/rust-mos:gte
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-cargo install gametank-sdk
+# After restart, install Ubuntu
+wsl --install Ubuntu-24.04
+```
 
+Then inside WSL, follow the Linux installation steps.
 
-----
+### Option 3: Native Windows with Rust
 
-wsl -d Ubuntu-22.04
+1. Install [Visual Studio Community 2022](https://visualstudio.microsoft.com/vs/community/) with the "Desktop development with C++" workload  
+   (See: [Rust Windows MSVC guide](https://rust-lang.github.io/rustup/installation/windows-msvc.html))
 
+2. Install Rust and Podman:
+   ```powershell
+   winget install Rustlang.Rustup
+   winget install RedHat.Podman-Desktop
+   ```
 
-
-### Windows (Native)
-
-don't, just fucking don't, just dooooooon't
-
-<!-- ~~please just install wsl, please - you'll be doing everyone a favor~~
-
-
-
-  
-
-but if you _must_ use windows...
-
-first step is to install Visual Studio Community 2022, and enable the "Desktop development with C++" workload during the install process.
-
-See: https://rust-lang.github.io/rustup/installation/windows-msvc.html#walkthrough-installing-visual-studio-2022
-
-  
-
-then you can install rust and docker through powershell
-
-  
-
-- `winget install Rustlang.Rustup`
-
-- `winget install Docker.DockerDesktop`
-
-  
-
-if you have vscode open, restart vscode completely (because windows things)
-
-  
-
-finally: cry, because ballmer was right (developer experience matters, and this one is dreadful) -->
-
-
------
-
-
+3. Then `cargo install gametank-sdk`
 
 
 ## Advanced: Manual Container Commands
