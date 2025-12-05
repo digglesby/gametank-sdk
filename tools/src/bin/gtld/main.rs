@@ -105,7 +105,7 @@ fn get_port() -> anyhow::Result<Box<dyn SerialPort>> {
         .timeout(Duration::from_millis(20000))
         .open()
         .expect("Failed to open port");
-      
+
     Ok(port)
 }
 
@@ -114,11 +114,11 @@ fn load_rom(port: &mut Box<dyn SerialPort>, file: Option<String>) -> anyhow::Res
     let path = file.ok_or_else(|| anyhow::anyhow!("No file provided"))?;
     let rom_buffer = fs::read(&path)?;
 
-    read_output(port, true);
+    read_output(port);
 
     port.write_all(b"mode f\r").expect("write data failed");
     port.flush().ok();
-    wait_for_str(port, "FLASH", true);
+    wait_for_str(port, "FLASH");
 
     write_all(port, rom_buffer);
 
@@ -127,49 +127,21 @@ fn load_rom(port: &mut Box<dyn SerialPort>, file: Option<String>) -> anyhow::Res
     Ok("go check it".to_string())
 }
 
-pub fn read_output(port: &mut Box<dyn SerialPort>, print: bool) -> [u8; 1024] {
+pub fn read_output(port: &mut Box<dyn SerialPort>) {
     // Read whatever's there
     let mut buf = [0u8; 1024];
     match port.read(&mut buf) {
         Ok(n) if n > 0 => {
-            if print {
-                // Sanitize output: replace non-printable chars with '.'
-                let sanitized: String = buf[..n]
-                    .iter()
-                    .map(|&b| {
-                        if (b >= 0x20 && b < 0x7F) || b == b'\n' {
-                            b as char
-                        } else if b == b'\r' || b == b'\t' {
-                            ' '
-                        } else {
-                            '.'
-                        }
-                    })
-                    .collect();
-                
-                // Only print if it has some meaningful content
-                if sanitized.trim().len() > 0 && n < 256 {
-                    let mut styled = style(&sanitized).dim();
-                    if sanitized.contains(">") {
-                        styled = styled.italic();
-                    }
-                    println!("{}", styled);
-                }
+            let line = String::from_utf8_lossy(&buf[..n]);
+            let mut styled = style(&line).dim();
+            if line.contains(">") {
+                styled = styled.italic();
             }
+            println!("{}", styled);
         }
-        Ok(_) => {
-            // No data read, that's fine
-        }
-        Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
-            // Timeout is expected sometimes, not a panic
-        }
-        Err(_) => {
-            eprintln!("Warning: error reading from serial port");
-        }
+        _ => panic!("Waited too long for output"),
     }
     port.flush().ok();
-
-    buf
 }
 
 pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
@@ -178,7 +150,7 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
     port.write_all(format!("shift {:X}\r", bank).as_bytes())
         .expect("Failed to write bank");
     port.flush().ok();
-    read_output(port, false);
+    read_output(port);
 
     let chunks = data.len() / 4096;
 
@@ -187,7 +159,7 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
         let chunk_end = chunk_start + 4096;
 
         // Send the header alone
-        let header = format!("writeMulti {:X} 400\r", chunk_start);
+        let header = format!("writeMulti {:X} 1000\r", chunk_start);
         port.write_all(header.as_bytes())
             .expect("write header failed");
         port.flush().ok();
@@ -200,12 +172,12 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
 
         sleep(Duration::from_millis(20));
 
-        wait_for_str(port, "ACK", false);
+        wait_for_str(port, "ACK");
     }
 
     port.write_all("checksum 0 4000\r".as_bytes())
         .expect("failed to get checksum");
-    let checksum = wait_for_str(port, "CRC32", true);
+    let checksum = wait_for_str(port, "CRC32");
 
     if checksum.contains(&format!("{:X}", crc32_in)) {
         println!("{}", style("Checksum valid").green());
@@ -214,7 +186,7 @@ pub fn write_bank(port: &mut Box<dyn SerialPort>, bank: u8, data: &[u8]) {
     }
 }
 
-fn wait_for_str(port: &mut Box<dyn SerialPort>, contains: &str, print: bool) -> String {
+fn wait_for_str(port: &mut Box<dyn SerialPort>, contains: &str) -> String {
     let mut buf = Vec::new();
     let mut byte = [0u8; 1];
 
@@ -223,30 +195,11 @@ fn wait_for_str(port: &mut Box<dyn SerialPort>, contains: &str, print: bool) -> 
             Ok(1) => {
                 if byte[0] == b'\n' {
                     let line = String::from_utf8_lossy(&buf);
-                    
-                    if print {
-                        // Sanitize output: replace non-printable chars
-                        let sanitized: String = buf
-                            .iter()
-                            .map(|&b| {
-                                if b >= 0x20 && b < 0x7F {
-                                    b as char
-                                } else if b == b'\r' || b == b'\t' {
-                                    ' '
-                                } else {
-                                    '.'
-                                }
-                            })
-                            .collect();
-                        
-                        if sanitized.trim().len() > 0 && buf.len() < 256 {
-                            let mut styled = style(&sanitized).dim();
-                            if sanitized.contains(">") {
-                                styled = styled.italic();
-                            }
-                            println!("{}", styled);
-                        }
+                    let mut styled = style(&line).dim();
+                    if line.contains(">") {
+                        styled = styled.italic();
                     }
+                    println!("{}", styled);
 
                     if line.contains(contains) {
                         return line.to_string();
@@ -301,19 +254,12 @@ pub fn flash_optiboot_da(port: &str, firmware_path: &str) {
 }
 
 pub fn dump(port: &mut Box<dyn SerialPort>) {
-    let mut data = Vec::<[u8; 1024]>::new();
+    let mut buf = [0u8; 4096 * 4];
+    port.write_all(b"dump\r").unwrap();
+    port.flush().ok();
 
-    read_output(port, true);
-
-    for bank in 0..128*4 {
-        let dump_cmd = format!("dump {:04X} 1000\r", bank * 4096);
-        port.write_all(dump_cmd.as_bytes()).expect("dump failed");
-        port.flush().ok();
-        let pt = read_output(port, false);
-        data.push(pt);
-    }
-
-    read_output(port, true);
+    port.read_exact(&mut buf).unwrap();
+    println!("{:?}", &buf);
 }
 
 pub fn write_all(port: &mut Box<dyn SerialPort>, data: Vec<u8>) {
@@ -329,11 +275,11 @@ pub fn write_all(port: &mut Box<dyn SerialPort>, data: Vec<u8>) {
 
     port.write_all(b"reset\r").expect("reset failed");
     port.flush().ok();
-    wait_for_str(port, "OK", true);
+    wait_for_str(port, "OK");
 
     port.write_all(b"eraseChip\r").expect("erase failed");
     port.flush().ok();
-    wait_for_str(port, "Done", true);
+    wait_for_str(port, "Done");
 
     for (idx, shifted_bank) in (first_bank..128).enumerate() {
         let start = idx * 16384;
