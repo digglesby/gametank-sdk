@@ -1,5 +1,5 @@
 [package]
-name = "rom" # rename me!
+name = "rom"
 version = "0.1.0"
 edition = "2024"
 
@@ -24,3 +24,4 @@ panic = "abort"
 volatile-register = "0.2.2"
 bit_field = "0.10.3"
 bitflags = "2.9.3"
+gametank-asset-macros = { path = "asset-macros" }

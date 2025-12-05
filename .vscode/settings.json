@@ -6,8 +6,7 @@
         "Cargo.toml",
         "tools/Cargo.toml",
         "sdk/rom/Cargo.toml",
-        "examples/bouncing-balls/rom/Cargo.toml",
         "tools/gte/core/Cargo.toml",
         "tools/gte/libretro/Cargo.toml",
-    ],    
+    ],
 }

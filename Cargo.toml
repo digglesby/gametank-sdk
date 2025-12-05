@@ -14,6 +14,7 @@ exclude = [
     "sdk/rom",
     "examples",
     "examples/*",
+    "examples/*/*",
 ]
 
 # The profile that 'cargo dist' will build with

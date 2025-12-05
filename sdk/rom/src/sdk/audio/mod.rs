@@ -1,4 +1,26 @@
-use crate::sdk::audio::pitch_table::MidiNote;
+//! Audio subsystem interface for the GameTank ACP (Audio Coprocessor).
+//!
+//! The GameTank has a dedicated 6502-based Audio Coprocessor that runs its own
+//! firmware. This module provides interfaces to communicate with the ACP.
+//!
+//! # Audio Firmware Selection
+//!
+//! Enable one of the following Cargo features to select an audio firmware:
+//! - `audio-wavetable-8v`: 8-voice wavetable synthesizer (~14kHz, ~660 cycles/sample)
+//!
+//! # Example
+//!
+//! ```rust,ignore
+//! use gametank_sdk::audio::{voices, MidiNote, WAVETABLE};
+//!
+//! // Get the voice array
+//! let v = voices();
+//!
+//! // Set up voice 0: C4, full volume, first wavetable
+//! v[0].set_note(MidiNote::C4);
+//! v[0].set_volume(63);
+//! v[0].set_wavetable(WAVETABLE[0]);
+//! ```
 
 // Audio firmware binary - selected via Cargo.toml features
 #[cfg(feature = "audio-wavetable-8v")]
@@ -15,21 +37,5 @@ pub use wavetable_8v::*;
 
 // Shared
 pub mod pitch_table;
-
-enum AudioMessage {
-    NoteOn(MidiNote),
-    NoteOff,
-    Delay(u8),
-}
-
-struct AudioData {
-    
-}
-
-
-impl AudioData {
-    fn process_audio(ticks: u16) {
-
-    }
-}
+pub use pitch_table::MidiNote;
 

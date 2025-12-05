@@ -3,142 +3,65 @@
 #![allow(unused)]
 #![allow(static_mut_refs)]
 
-use core::ptr;
-
 use crate::{
-    boot::{enable_irq_handler, wait},
+    ball::init_balls,
+    boot::wait,
     sdk::{
-        audio::{FIRMWARE, pitch_table::MidiNote, VOLUME}, scr::{Console, SystemControl}, via::Via, video_dma::blitter::BlitterGuard
+        audio::FIRMWARE, scr::{Console, SystemControl}, via::Via, video_dma::blitter::BlitterGuard,
     },
 };
 
+use gametank_asset_macros::include_bmp;
+
+mod audio_demo;
+mod ball;
 mod boot;
 mod sdk;
+
+#[unsafe(link_section = ".rodata.bank124")]
+pub static GRADIENT_BACKGROUND: [u8; 128 * 128] = include_bmp!("assets/gradient.bmp");
+
+fn load_background_sprite(console: &mut Console, via: &mut Via) {
+    via.change_rom_bank(124);
+    if let Some(mut sm) = console.dma.sprite_mem(&mut console.sc) {
+        sm.bytes().copy_from_slice(&GRADIENT_BACKGROUND);
+    }
+}
 
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".text.bank126")]
 fn draw_background(sc: &mut SystemControl, blitter: &mut BlitterGuard) {
+    // Draw top border (127px wide, 1px tall, at x=1, y=0)
     blitter.draw_square(sc, 1, 0, 127, 1, !0b100_00_000);
     blitter.wait_blit();
+    // Draw left border (1px wide, 127px tall, at x=0, y=1)
     blitter.draw_square(sc, 0, 1, 1, 127, !0b100_00_000);
     blitter.wait_blit();
+    // Draw corner pixel at (0,0)
     blitter.draw_square(sc, 0, 0, 1, 1, !0b100_00_000);
+    // Draw the gradient background sprite (127x127) at (1,1)
     blitter.draw_sprite(sc, 0, 0, 1, 1, 127, 127);
 }
 
 #[unsafe(no_mangle)]
-#[unsafe(link_section = ".text.bank125")]
-fn fill_sprite_quad(console: &mut Console) {
-    if let Some(mut sm) = console.dma.sprite_mem(&mut console.sc) {
-        let mut color = 0;
-        let mut x_counter: u8 = 0;
-        let mut y_counter: u16 = 0;
-        let mut xy_counter: u8 = 0;
-
-        for (n, byte) in sm.bytes().iter_mut().enumerate() {
-            if xy_counter == 16 {
-                color += 32;
-                xy_counter = 0;
-            }
-            if x_counter == 4 {
-                color += 1;
-                x_counter = 0;
-            }
-            if y_counter == 128 {
-                color -= 32;
-                xy_counter += 1;
-                y_counter = 0;
-            }
-            *byte = color;
-            x_counter += 1;
-            y_counter += 1;
-        }
-    }
-}
-
-#[derive(Copy, Clone)]
-struct Ball {
-    x: i8,
-    y: i8,
-    vx: i8,
-    vy: i8,
-    size: u8,
-    color: u8,
-}
-
-impl Ball {
-    fn do_ball_things(&mut self) {
-        let mut ball = self;
-        let physics_size = ball.size;
-
-        ball.x += ball.vx;
-        ball.y += ball.vy;
-        if ball.x >= (128 - physics_size) as i8 {
-            ball.vx = -1;
-        }
-        if ball.x <= 33 {
-            ball.vx = 1;
-        }
-        if ball.y >= (128 - physics_size) as i8 {
-            ball.vy = -1;
-        }
-        if ball.y <= 1 {
-            ball.vy = 1;
-        }
-    }
-
-    fn draw(&self, sc: &mut SystemControl, blitter: &mut BlitterGuard) {
-        let mut ball = self;
-        blitter.draw_square(
-            sc,
-            ball.x as u8,
-            ball.y as u8,
-            ball.size as u8,
-            ball.size,
-            !ball.color,
-        );
-        blitter.wait_blit();
-    }
-}
-
-// TODO: instead of doing console init - why not provide MAIN with a Console object, eh?
-// Then we can even keep Console::init private and not need to make a singleton
-#[unsafe(no_mangle)]
 fn main(mut console: Console) {
     let via = unsafe { Via::new() };
-    via.change_rom_bank(125);
-    fill_sprite_quad(&mut console);
+
+    load_background_sprite(&mut console, via);
+
+    // load_background_sprite sets bank to 124, and our draw_background function is in bank 126
+    via.change_rom_bank(126);
 
     console.audio.copy_from_slice(FIRMWARE);
     console.sc.set_audio(0xFF); // start playing audio at 14kHz
 
-    let voices = sdk::audio::voices();
-
-    // we have to track the banks ourselves :^)
-    via.change_rom_bank(126);
-
-    let mut base_ball = Ball {
-        x: 44,
-        y: 19,
-        size: 8,
-        vx: 1,
-        vy: 1,
-        color: 0b010_11_100,
-    };
-
-    let mut balls = [base_ball; 6];
-    for (n, ball) in balls.iter_mut().enumerate() {
-        ball.size = (7 - n) as u8;
-        ball.x -= (n << 0) as i8;
-        ball.y -= (n << 0) as i8;
-        ball.color += (n as u8) << 5;
-    }
+    let mut sequencer = audio_demo::init_demo();
+    let mut balls = init_balls();
 
     loop {
         unsafe {
             wait();
         }
-
 
         if let Some(mut fb) = console.dma.framebuffers(&mut console.sc) {
             fb.flip(&mut console.sc);
@@ -146,16 +69,19 @@ fn main(mut console: Console) {
 
         let mut blitter = console.dma.blitter(&mut console.sc).unwrap();
 
-        // We have a LOT of CPU cycles to use while drawing the full background, waiting for the blit to finish.
+        // the blitter runs parallel of the CPU, which means...
         draw_background(&mut console.sc, &mut blitter);
 
-        // We can use that time to do all the physics and input handling _before_ drawing waiting for this blit to finish.
+        // we can use that time to do other things, like
+        // - physics
         for ball in &mut balls {
             ball.do_ball_things();
         }
+        // - and audio sequencing!
+        sequencer.tick();
 
+        // then we wait for the blit to finish before drawing each ball
         blitter.wait_blit();
-
         for ball in balls.iter().rev() {
             ball.draw(&mut console.sc, &mut blitter);
         }

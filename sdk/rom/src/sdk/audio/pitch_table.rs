@@ -1,9 +1,9 @@
 #![allow(non_camel_case_types)]
 
-pub const FS: u32 = 13_983 / 2;           // samples/sec
-const PHASE_MOD: u32 = 1 << 16;       // 16.16 phase accumulator
-const SEMITONE_RATIO_Q16: u32 = 69_433; // ≈ 2^(1/12) * 65536
-const MIDI0_FREQ_Q16: u32 = 535_400;  // 8.1757989156 Hz * 65536
+pub const FS: u32 = 13_983;               // samples/sec (14kHz interrupt rate)
+const PHASE_MOD: u32 = 1 << 16;           // 16.16 phase accumulator
+const SEMITONE_RATIO_Q16: u32 = 69_433;   // ≈ 2^(1/12) * 65536
+const MIDI0_FREQ_Q16: u32 = 535_400;      // 8.1757989156 Hz * 65536
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

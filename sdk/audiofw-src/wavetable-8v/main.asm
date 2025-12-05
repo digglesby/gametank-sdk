@@ -69,76 +69,84 @@ DEFINE_WAVETABLE 5
 DEFINE_WAVETABLE 6
 DEFINE_WAVETABLE 7
 
-audio_irq:
-    ; Clear output buffer for mixing
-    lda #0x80              ; 2 cycles - center value (silence)
-    ;sta 0x8040              ; 4 cycles - clear output buffer
-    ; Cumulative: 6 cycles
-
-    ; Add FREQ to PHASE for voice 0 (16-bit addition with carry)
-    clc                    ; 2 cycles - clear carry
-    lda VOICE_0_PHASE_L    ; 3 cycles - load phase low byte
-    adc VOICE_0_FREQ_L     ; 3 cycles - add freq low byte (carry propagates)
-    sta VOICE_0_PHASE_L    ; 3 cycles - store phase low byte
-    lda VOICE_0_PHASE_H    ; 3 cycles - load phase high byte
-    adc VOICE_0_FREQ_H     ; 3 cycles - add freq high byte with carry
-    sta VOICE_0_PHASE_H    ; 3 cycles - store phase high byte
-    ; Cumulative: 20 cycles
+; Macro to process a single voice and mix into TEMP_SAMPLE
+.macro PROCESS_VOICE n
+    ; Add FREQ to PHASE (16-bit addition)
+    clc
+    lda VOICE_\n\()_PHASE_L
+    adc VOICE_\n\()_FREQ_L
+    sta VOICE_\n\()_PHASE_L
+    lda VOICE_\n\()_PHASE_H
+    adc VOICE_\n\()_FREQ_H
+    sta VOICE_\n\()_PHASE_H
 
     ; Get wavetable sample using phase_high as index
-    ldx VOICE_0_PHASE_H    ; 3 cycles - load phase high byte to X
-    lda sine_table, x      ; 4 cycles - lookup sine sample
-    ; Cumulative: 27 cycles
-    
+    tax                    ; X = phase high byte
+    lda sine_table, x      ; lookup sample (TODO: use per-voice wavetable pointer)
+
     ; Scale to 7-bit for volume scaling
-    lsr a                  ; 2 cycles - divide by 2 (shift right)
-    sta TEMP_SAMPLE        ; 3 cycles - save scaled sample
-    ; 32 cycles
-    
-    ; Compute s - volume first
-;    lda TEMP_SAMPLE        ; 3 cycles - load scaled sample
-    sec                    ; 2 cycles - set carry for subtraction
-    sbc VOICE_0_VOLUME     ; 3 cycles - A = s - volume
-    tax                    ; 2 cycles - A -> X
-    lda vol_table, x       ; 4 cycles - A = vol_table[X]
-    sta TEMP_RESULT1       ; 3 cycles - save first result of vol_tab[sample - volume]
-    ; Cumulative: 46 cycles
-    
-    ; Compute s + volume
-    lda TEMP_SAMPLE        ; 3 cycles - restore scaled sample
-    clc                    ; 2 cycles - clear carry
-    adc VOICE_0_VOLUME     ; 3 cycles - A = s + volume
-    tax                    ; 2 cycles - X for second lookup
-    lda vol_table, x       ; 4 cycles - A = vol_table[s + volume]
-    ; Cumulative: 60 cycles
-    
-    ; Subtract: vol_table[s-v] - vol_table[s+v]
-    ; First result (s-v) is in TEMP_RESULT1, second (s+v) is in A
-    sta TEMP_RESULT2       ; 3 cycles - save second result (s+v)
-    lda TEMP_RESULT1       ; 3 cycles - load first result (s-v)
-    sec                    ; 2 cycles - set carry for subtraction
-    sbc TEMP_RESULT2       ; 3 cycles - A = vol_table[s-v] - vol_table[s+v]
-    ;tax                    ; 2 cycles
-    ; Cumulative: 71 cycles
-    
-    ; Store to output buffer at $8040
-    ;sta 0x40              ; 4 cycles - store voice 0 output
-    ; 
+    lsr a                  ; divide by 2
+    sta TEMP_RESULT1       ; save scaled sample (s)
 
-    adc #0x80
+    ; Compute vol_table[s - volume]
+    sec
+    sbc VOICE_\n\()_VOLUME
+    tax
+    lda vol_table, x
+    sta TEMP_RESULT2       ; save vol_table[s - v]
 
+    ; Compute vol_table[s + volume]
+    lda TEMP_RESULT1       ; restore scaled sample
+    clc
+    adc VOICE_\n\()_VOLUME
+    tax
+    lda vol_table, x       ; A = vol_table[s + v]
 
-    ; remove me
+    ; Result = vol_table[s-v] - vol_table[s+v] (signed voice output)
+    sta TEMP_RESULT1       ; temp save s+v result
+    lda TEMP_RESULT2       ; load s-v result
+    sec
+    sbc TEMP_RESULT1       ; A = vol_table[s-v] - vol_table[s+v]
+
+    ; Mix into accumulator (add to running total)
+    clc
+    adc TEMP_SAMPLE
+    sta TEMP_SAMPLE
+.endm
+
+audio_irq:
+    ; Initialize accumulator with center value (silence = 0x80)
+    ; We'll mix all voices relative to center
+    lda #0x80
+    sta TEMP_SAMPLE        ; Use as running mix accumulator
+
+    ; Process all 8 voices using macro
+    PROCESS_VOICE 0
+    PROCESS_VOICE 1
+    PROCESS_VOICE 2
+    PROCESS_VOICE 3
+    PROCESS_VOICE 4
+    PROCESS_VOICE 5
+    PROCESS_VOICE 6
+    PROCESS_VOICE 7
+
+    ; Output final mixed sample
+    lda TEMP_SAMPLE
     sta 0x8040
 
-    ; Cumulative: 75 cycles
-    
-    ; TODO: Process voices 1-7 and add to $8040
-    
-    rti                    ; 6 cycles - return from interrupt
-    ; Total: 81 cycles for voice 0
+    rti                    ; return from interrupt
 
 
+; Macro to initialize a voice (phase=0, freq=0, waveptr=sine_table, volume=0)
+.macro INIT_VOICE n
+    lda #0
+    sta VOICE_\n\()_VOLUME
+    ; Set wavetable pointer to sine_table
+    lda #<sine_table
+    sta VOICE_\n\()_WAVEPTR_L
+    lda #>sine_table
+    sta VOICE_\n\()_WAVEPTR_H
+.endm
 
 ; Simple main function that just waits
 .section .text
@@ -151,27 +159,15 @@ _start:
     ldx #0xff
     txs
     
-    ; Initialize voice 0
-    ; Set phase to 0
-    lda #0
-    sta VOICE_0_PHASE_L
-    sta VOICE_0_PHASE_H
-    
-    ; Set frequency for 400Hz at 24kHz sample rate
-    ; Phase increment = (65536 * 400) / 14000 = ~1872 = 0x0750
-    lda #0x50
-    sta VOICE_0_FREQ_L
-    lda #0x07
-    sta VOICE_0_FREQ_H
-    
-    ; Set wavetable pointer to sine_table (0x0400)
-    lda #0x00
-    sta VOICE_0_WAVEPTR_L
-    lda #0x04
-    sta VOICE_0_WAVEPTR_H
-
-    lda #0x40
-    sta VOICE_0_VOLUME
+    ; Initialize all 8 voices
+    INIT_VOICE 0
+    INIT_VOICE 1
+    INIT_VOICE 2
+    INIT_VOICE 3
+    INIT_VOICE 4
+    INIT_VOICE 5
+    INIT_VOICE 6
+    INIT_VOICE 7
     
     ; Enable interrupts
     cli

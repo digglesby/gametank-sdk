@@ -63,20 +63,32 @@ pub fn ensure_container() -> Result<(std::path::PathBuf, ContainerRuntime), Stri
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     if stdout.contains("gametank") {
-        // Container is running - check if mount point matches
-        let inspect_output = Command::new(cmd)
-            .args(["inspect", "gametank", "--format", "{{range .Mounts}}{{.Source}}{{end}}"])
-            .output()
-            .map_err(|e| format!("Failed to inspect container: {}", e))?;
+        // Container is running - verify it's mounted to this workspace
+        // Write a uniquely-named temp file, check if container can see it, then delete it
+        let marker_id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let marker_name = format!(".gametank-check-{}", marker_id);
+        let marker_path = mount_root.join(&marker_name);
+        let container_marker = format!("/workspace/{}", marker_name);
         
-        let current_mount = String::from_utf8_lossy(&inspect_output.stdout).trim().to_string();
-        let expected_mount = mount_root.to_string_lossy().to_string();
+        // Write the marker file
+        let _ = std::fs::write(&marker_path, "");
         
-        if current_mount == expected_mount {
+        // Check if container can see it
+        let test_output = Command::new(cmd)
+            .args(["exec", "gametank", "test", "-f", &container_marker])
+            .status();
+        
+        // Clean up marker file
+        let _ = std::fs::remove_file(&marker_path);
+        
+        if test_output.map(|s| s.success()).unwrap_or(false) {
             return Ok((mount_root, runtime));
         }
         
-        // Mount point changed - need to recreate container
+        // Container can't see our workspace - recreate
         println!("Workspace changed, recreating container...");
         let _ = Command::new(cmd)
             .args(["rm", "-f", "gametank"])
