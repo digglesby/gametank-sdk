@@ -71,6 +71,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gametank"
+version = "0.1.0"
+dependencies = [
+ "bit_field",
+ "bitflags",
+ "volatile-register",
+]
+
+[[package]]
 name = "gametank-asset-macros"
 version = "0.1.0"
 dependencies = [
@@ -145,6 +154,7 @@ version = "0.1.0"
 dependencies = [
  "bit_field",
  "bitflags",
+ "gametank",
  "gametank-asset-macros",
  "volatile-register",
 ]

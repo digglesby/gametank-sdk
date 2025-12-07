@@ -1,6 +1,10 @@
-use core::{arch::asm, panic::PanicInfo, ptr};
+use core::{panic::PanicInfo, ptr};
 
-use crate::{main, sdk::{blitter::SpriteQuadrant, scr::Console}};
+use crate::{blitter::SpriteQuadrant, scr::Console};
+
+unsafe extern "C" {
+    fn main(console: Console);
+}
 
 #[panic_handler]
 fn panic(_panic: &PanicInfo<'_>) -> ! {
@@ -100,7 +104,7 @@ fn call_main() {
         blitter.set_vram_quad(SpriteQuadrant::One);
     }
 
-    main(console);
+    unsafe { main(console) };
 }
 
 #[unsafe(no_mangle)]

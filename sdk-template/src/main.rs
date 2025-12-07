@@ -3,20 +3,16 @@
 #![allow(unused)]
 #![allow(static_mut_refs)]
 
-use crate::{
-    ball::init_balls,
-    boot::wait,
-    sdk::{
-        audio::FIRMWARE, scr::{Console, SystemControl}, via::Via, video_dma::blitter::BlitterGuard,
-    },
+use gametank::{
+    audio::FIRMWARE, boot::wait, scr::{Console, SystemControl}, via::Via, video_dma::blitter::BlitterGuard,
 };
+
+use crate::ball::init_balls;
 
 use gametank_asset_macros::include_bmp;
 
 mod audio_demo;
 mod ball;
-mod boot;
-mod sdk;
 
 #[unsafe(link_section = ".rodata.bank124")]
 pub static GRADIENT_BACKGROUND: [u8; 128 * 128] = include_bmp!("assets/gradient.bmp");
@@ -44,7 +40,7 @@ fn draw_background(sc: &mut SystemControl, blitter: &mut BlitterGuard) {
 }
 
 #[unsafe(no_mangle)]
-fn main(mut console: Console) {
+extern "C" fn main(mut console: Console) {
     let via = unsafe { Via::new() };
 
     load_background_sprite(&mut console, via);

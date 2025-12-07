@@ -59,10 +59,10 @@
 
 // Audio firmware binary - selected via Cargo.toml features
 #[cfg(feature = "audio-wavetable-8v")]
-pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../../../audiofw/wavetable-8v.bin");
+pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../../audiofw/wavetable-8v.bin");
 
 #[cfg(feature = "audio-fm-4op")]
-pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../../../audiofw/fm-4op.bin");
+pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../../audiofw/fm-4op.bin");
 
 // Audio interface modules - selected via Cargo.toml features
 #[cfg(feature = "audio-wavetable-8v")]

@@ -42,7 +42,7 @@
 //! console.audio[0x400..0x500].copy_from_slice(&my_wave);
 //! ```
 
-use crate::sdk::audio::pitch_table::{midi_inc, MidiNote};
+use crate::audio::pitch_table::{midi_inc, MidiNote};
 
 /// Base address for voice registers (CPU-side address, ACP RAM at 0x3000)
 pub const VOICE_BASE: usize = 0x3041;

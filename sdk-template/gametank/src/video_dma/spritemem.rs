@@ -21,7 +21,7 @@
 //!   X=0-127     X=128-255
 //! ```
 //!
-//! Use [`BankFlags`](crate::sdk::scr::BankFlags) to select the page (0-7),
+//! Use [`BankFlags`](crate::scr::BankFlags) to select the page (0-7),
 //! and [`BlitterGuard::set_vram_quad`](super::blitter::BlitterGuard::set_vram_quad)
 //! to select the quadrant before loading sprites.
 //!
@@ -39,12 +39,12 @@
 //! The blitter can read the **full 256×256 page** using GX/GY coordinates 0-255.
 //! The CPU quadrant restriction only affects direct memory access, not blits.
 
-use crate::sdk::{
+use crate::{
     scr::{SystemControl, VideoFlags},
     video_dma::{VideoDma, blitter::Blitter, framebuffers::Framebuffers},
 };
 
-pub(in crate::sdk) struct SpriteMem;
+pub(crate) struct SpriteMem;
 
 impl SpriteMem {
     #[inline(always)]
@@ -70,8 +70,8 @@ impl SpriteMem {
 ///
 /// Released back to [`DmaManager`](super::DmaManager) when dropped.
 pub struct SpriteMemGuard<'a> {
-    pub(in crate::sdk) dma_slot: &'a mut Option<VideoDma>,
-    pub(in crate::sdk) inner: SpriteMem,
+    pub(crate) dma_slot: &'a mut Option<VideoDma>,
+    pub(crate) inner: SpriteMem,
 }
 
 impl<'a> Drop for SpriteMemGuard<'a> {
@@ -83,7 +83,7 @@ impl<'a> Drop for SpriteMemGuard<'a> {
 impl<'a> SpriteMemGuard<'a> {
     /// Get a mutable reference to the 16KB sprite RAM quadrant.
     ///
-    /// The current page is selected by [`BankFlags`](crate::sdk::scr::BankFlags) bits 0-2.
+    /// The current page is selected by [`BankFlags`](crate::scr::BankFlags) bits 0-2.
     /// The quadrant within the page is determined by the blitter's GX/GY counters.
     #[inline(always)]
     pub fn bytes(&mut self) -> &mut [u8; 0x4000] {

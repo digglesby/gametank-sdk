@@ -110,8 +110,8 @@ fn do_docs() -> Result<(), String> {
         return Err("Failed to build documentation".to_string());
     }
     
-    // Open the SDK module docs directly
-    let doc_path = rom_dir.join("target/doc/rom/sdk/index.html");
+    // Open the SDK docs directly
+    let doc_path = rom_dir.join("target/doc/gametank/index.html");
     if !doc_path.exists() {
         return Err(format!("Documentation not found at {:?}", doc_path));
     }

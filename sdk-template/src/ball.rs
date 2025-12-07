@@ -1,4 +1,4 @@
-use crate::sdk::{scr::SystemControl, video_dma::blitter::BlitterGuard};
+use gametank::{scr::SystemControl, video_dma::blitter::BlitterGuard};
 
 #[derive(Copy, Clone)]
 pub struct Ball {

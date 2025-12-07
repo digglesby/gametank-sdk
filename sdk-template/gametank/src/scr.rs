@@ -54,11 +54,11 @@ use bitflags::{self, Flags};
 use volatile_register::WO;
 
 use crate::boot::{_VECTOR_TABLE, disable_irq_handler, enable_irq_handler, wait};
-use crate::sdk::blitter::BlitterFillMode;
-use crate::sdk::scr;
-use crate::sdk::video_dma::framebuffers::Framebuffers;
-use crate::sdk::video_dma::spritemem::SpriteMem;
-use crate::sdk::video_dma::{DmaManager, VideoDma};
+use crate::blitter::BlitterFillMode;
+use crate::scr;
+use crate::video_dma::framebuffers::Framebuffers;
+use crate::video_dma::spritemem::SpriteMem;
+use crate::video_dma::{DmaManager, VideoDma};
 
 bitflags::bitflags! {
     /// Video/Blitter control flags at `$2007`.
@@ -164,8 +164,8 @@ pub static mut SCR_MIR: Scr = Scr {
 ///
 /// Most operations go through [`Console`] rather than accessing this directly.
 pub struct SystemControl {
-    pub(in crate::sdk) scr: &'static mut Scr,
-    pub(in crate::sdk) mir: &'static mut Scr,
+    pub(crate) scr: &'static mut Scr,
+    pub(crate) mir: &'static mut Scr,
 }
 
 impl SystemControl {
@@ -176,23 +176,23 @@ impl SystemControl {
     pub fn init() -> Self {
         unsafe {
             // mir is zeroe'd
-            let mir = &mut SCR_MIR;
+            let mir = &raw mut SCR_MIR;
             let scr = &mut *(0x2000 as *mut Scr);
 
-            mir.video_reg.insert(VideoFlags::DMA_NMI);
-            mir.video_reg.insert(VideoFlags::DMA_IRQ);
-            mir.video_reg.insert(VideoFlags::DMA_GCARRY);
-            mir.video_reg.insert(VideoFlags::DMA_OPAQUE);
-            mir.video_reg.insert(VideoFlags::DMA_PAGE_OUT);
-            mir.banking.remove(BankFlags::FRAMEBUFFER_SELECT);
+            (*mir).video_reg.insert(VideoFlags::DMA_NMI);
+            (*mir).video_reg.insert(VideoFlags::DMA_IRQ);
+            (*mir).video_reg.insert(VideoFlags::DMA_GCARRY);
+            (*mir).video_reg.insert(VideoFlags::DMA_OPAQUE);
+            (*mir).video_reg.insert(VideoFlags::DMA_PAGE_OUT);
+            (*mir).banking.remove(BankFlags::FRAMEBUFFER_SELECT);
 
-            scr.audio_reset = mir.audio_reset;
-            scr.audio_nmi = mir.audio_nmi;
-            scr.banking = mir.banking;
-            scr.audio_reg = mir.audio_reg;
-            scr.video_reg = mir.video_reg;
+            scr.audio_reset = (*mir).audio_reset;
+            scr.audio_nmi = (*mir).audio_nmi;
+            scr.banking = (*mir).banking;
+            scr.audio_reg = (*mir).audio_reg;
+            scr.video_reg = (*mir).video_reg;
 
-            Self { scr, mir }
+            Self { scr, mir: &mut *mir }
         }
     }
 

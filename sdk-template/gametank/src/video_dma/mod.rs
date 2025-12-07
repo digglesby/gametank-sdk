@@ -71,7 +71,7 @@ pub mod blitter;
 pub mod framebuffers;
 pub mod spritemem;
 
-use crate::sdk::{
+use crate::{
     scr::{SystemControl, VideoFlags},
     video_dma::{
         blitter::{Blitter, BlitterGuard},
@@ -84,7 +84,7 @@ use crate::sdk::{
 //   DMA_CPU_TO_VRAM == 1 -> Framebuffers
 //   DMA_CPU_TO_VRAM == 0 -> Sprite RAM
 // DMA_ENABLE == 1 -> Blitter Control Registers
-pub(in crate::sdk) enum VideoDma {
+pub(crate) enum VideoDma {
     DmaFb(Framebuffers),
     DmaBlit(Blitter),
     DmaSprites(SpriteMem),
@@ -96,13 +96,13 @@ pub(in crate::sdk) enum VideoDma {
 /// depending on hardware flags. `DmaManager` ensures only one is active
 /// at a time using Rust's ownership system.
 ///
-/// Access video hardware through [`Console::dma`](crate::sdk::scr::Console::dma).
+/// Access video hardware through [`Console::dma`](crate::scr::Console::dma).
 pub struct DmaManager {
-    pub(in crate::sdk) video_dma: Option<VideoDma>,
+    pub(crate) video_dma: Option<VideoDma>,
 }
 
 impl DmaManager {
-    pub(in crate::sdk) fn new(vdma: VideoDma) -> Self {
+    pub(crate) fn new(vdma: VideoDma) -> Self {
         Self {
             video_dma: Some(vdma),
         }

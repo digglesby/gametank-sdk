@@ -1,3 +1,5 @@
+#![no_std]
+
 //! # GameTank SDK
 //!
 //! The Rust SDK for developing games on the [GameTank](https://gametank.zone/) console.
@@ -162,3 +164,4 @@ pub mod scr;
 pub mod via;
 pub mod video_dma;
 pub mod audio;
+pub mod boot;

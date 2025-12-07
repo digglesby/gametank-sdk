@@ -1,7 +1,12 @@
 [package]
-name = "gametank-sdk"
+name = "gametank"
 version = "0.1.0"
 edition = "2024"
+
+[features]
+default = ["audio-wavetable-8v"]
+audio-wavetable-8v = []
+audio-fm-4op = []
 
 [dependencies]
 volatile-register = "0.2.2"

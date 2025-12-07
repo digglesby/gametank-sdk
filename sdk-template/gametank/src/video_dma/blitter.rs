@@ -57,14 +57,12 @@
 
 use crate::{
     boot::wait,
-    sdk::{
-        blitter::{Bcr, BlitterFillMode, SpriteQuadrant},
-        scr::{SystemControl, VideoFlags},
-        video_dma::{framebuffers::Framebuffers, spritemem::SpriteMem, VideoDma},
-    },
+    blitter::{Bcr, BlitterFillMode, SpriteQuadrant},
+    scr::{SystemControl, VideoFlags},
+    video_dma::{framebuffers::Framebuffers, spritemem::SpriteMem, VideoDma},
 };
 
-pub(in crate::sdk) struct Blitter;
+pub(crate) struct Blitter;
 
 impl Blitter {
     #[inline(always)]
@@ -99,8 +97,8 @@ impl Blitter {
 /// // blitter is automatically released when it goes out of scope
 /// ```
 pub struct BlitterGuard<'a> {
-    pub(in crate::sdk) dma_slot: &'a mut Option<VideoDma>,
-    pub(in crate::sdk) inner: Blitter,
+    pub(crate) dma_slot: &'a mut Option<VideoDma>,
+    pub(crate) inner: Blitter,
 }
 
 impl<'a> Drop for BlitterGuard<'a> {

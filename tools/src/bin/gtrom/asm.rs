@@ -2,72 +2,46 @@
 //!
 //! Handles assembling .asm files into libasm.a using llvm-mc and llvm-ar.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use crate::container::podman_exec;
-
-/// Recursively find all .asm files in a directory, excluding target directory
-fn find_asm_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
-    let mut asm_files = Vec::new();
-    
-    fn visit_dirs(dir: &Path, asm_files: &mut Vec<PathBuf>) -> Result<(), String> {
-        if dir.is_dir() {
-            // Skip target directory
-            if dir.file_name().map_or(false, |n| n == "target") {
-                return Ok(());
-            }
-            
-            for entry in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
-                let entry = entry.map_err(|e| e.to_string())?;
-                let path = entry.path();
-                
-                if path.is_dir() {
-                    visit_dirs(&path, asm_files)?;
-                } else if path.extension().map_or(false, |ext| ext == "asm") {
-                    asm_files.push(path);
-                }
-            }
-        }
-        Ok(())
-    }
-    
-    visit_dirs(dir, &mut asm_files)?;
-    Ok(asm_files)
-}
-
 
 /// Build assembly files into libasm.a (runs directly)
 pub fn build_asm(workdir: &str) -> Result<(), String> {
     println!("Assembling .asm files...");
     
-    let workdir_path = Path::new(workdir);
-    let target_dir = workdir_path.join("target/asm");
+    let asm_dir = Path::new(workdir).join("src/asm");
+    let target_dir = Path::new(workdir).join("target/asm");
     
     std::fs::create_dir_all(&target_dir)
         .map_err(|e| format!("Failed to create target/asm: {}", e))?;
 
-    // Find and assemble all .asm files recursively in workdir
-    let asm_files = find_asm_files(workdir_path)?;
-    
-    for path in asm_files {
-        let filename = path.file_stem().unwrap().to_string_lossy();
-        println!("  Assembling {}...", filename);
-        
-        let status = Command::new("llvm-mc")
-            .args([
-                "--filetype=obj",
-                "-triple=mos",
-                "-mcpu=mosw65c02",
-                path.to_str().unwrap(),
-                "-o",
-                &format!("{}/target/asm/{}.o", workdir, filename),
-            ])
-            .status()
-            .map_err(|e| format!("Failed to assemble {}: {}", filename, e))?;
+    // Find and assemble all .asm files
+    if asm_dir.exists() {
+        for entry in std::fs::read_dir(&asm_dir).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.extension().map_or(false, |ext| ext == "asm") {
+                let filename = path.file_stem().unwrap().to_string_lossy();
+                println!("  Assembling {}...", filename);
+                
+                let status = Command::new("llvm-mc")
+                    .args([
+                        "--filetype=obj",
+                        "-triple=mos",
+                        "-mcpu=mosw65c02",
+                        path.to_str().unwrap(),
+                        "-o",
+                        &format!("{}/target/asm/{}.o", workdir, filename),
+                    ])
+                    .status()
+                    .map_err(|e| format!("Failed to assemble {}: {}", filename, e))?;
 
-        if !status.success() {
-            return Err(format!("Failed to assemble {}", filename));
+                if !status.success() {
+                    return Err(format!("Failed to assemble {}", filename));
+                }
+            }
         }
     }
 
@@ -106,6 +80,7 @@ pub fn build_asm(workdir: &str) -> Result<(), String> {
 pub fn build_asm_in_container(workdir: &Path, working_dir: &Path) -> Result<(), String> {
     println!("Assembling .asm files...");
     
+    let asm_dir = workdir.join("src/asm");
     let target_dir = workdir.join("target/asm");
     
     std::fs::create_dir_all(&target_dir)
@@ -114,24 +89,26 @@ pub fn build_asm_in_container(workdir: &Path, working_dir: &Path) -> Result<(), 
     let rel_workdir = workdir.strip_prefix(working_dir).unwrap_or(workdir);
     let workspace_dir = format!("/workspace/{}", rel_workdir.to_string_lossy());
 
-    // Find and assemble all .asm files recursively in workdir
-    let asm_files = find_asm_files(workdir)?;
-    
-    for path in asm_files {
-        let filename = path.file_stem().unwrap().to_string_lossy();
-        println!("  Assembling {}...", filename);
-        
-        let rel_path = path.strip_prefix(working_dir).unwrap_or(&path);
-        
-        podman_exec("/workspace", &[
-            "llvm-mc",
-            "--filetype=obj",
-            "-triple=mos",
-            "-mcpu=mosw65c02",
-            &format!("/workspace/{}", rel_path.to_string_lossy()),
-            "-o",
-            &format!("{}/target/asm/{}.o", workspace_dir, filename),
-        ])?;
+    // Find and assemble all .asm files
+    if asm_dir.exists() {
+        for entry in std::fs::read_dir(&asm_dir).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.extension().map_or(false, |ext| ext == "asm") {
+                let filename = path.file_stem().unwrap().to_string_lossy();
+                println!("  Assembling {}...", filename);
+                
+                podman_exec("/workspace", &[
+                    "llvm-mc",
+                    "--filetype=obj",
+                    "-triple=mos",
+                    "-mcpu=mosw65c02",
+                    &format!("{}/src/asm/{}.asm", workspace_dir, filename),
+                    "-o",
+                    &format!("{}/target/asm/{}.o", workspace_dir, filename),
+                ])?;
+            }
+        }
     }
 
     // Archive into libasm.a

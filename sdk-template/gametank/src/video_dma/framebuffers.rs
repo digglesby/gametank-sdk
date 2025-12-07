@@ -35,12 +35,12 @@
 //!
 //! The framebuffer is row-major, 128 bytes per row.
 
-use crate::sdk::{
+use crate::{
     scr::{BankFlags, SystemControl, VideoFlags},
     video_dma::{Blitter, VideoDma, spritemem::SpriteMem},
 };
 
-pub(in crate::sdk) struct Framebuffers;
+pub(crate) struct Framebuffers;
 
 impl Framebuffers {
     #[inline(always)]
@@ -64,8 +64,8 @@ impl Framebuffers {
 /// Provides double buffering (`flip`) and direct pixel access (`bytes`).
 /// Released back to [`DmaManager`](super::DmaManager) when dropped.
 pub struct FramebuffersGuard<'a> {
-    pub(in crate::sdk) dma_slot: &'a mut Option<VideoDma>,
-    pub(in crate::sdk) inner: Framebuffers,
+    pub(crate) dma_slot: &'a mut Option<VideoDma>,
+    pub(crate) inner: Framebuffers,
 }
 
 impl<'a> Drop for FramebuffersGuard<'a> {

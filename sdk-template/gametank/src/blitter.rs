@@ -2,7 +2,7 @@
 //!
 //! Direct access to the Blitter Control Registers (BCR) at `$4000-$4007`.
 //!
-//! **Note:** For most use cases, use [`video_dma::blitter::BlitterGuard`](crate::sdk::video_dma::blitter::BlitterGuard)
+//! **Note:** For most use cases, use [`video_dma::blitter::BlitterGuard`](crate::video_dma::blitter::BlitterGuard)
 //! instead, which provides a safer and more ergonomic interface.
 //!
 //! ## Register Layout
@@ -40,7 +40,7 @@ use volatile_register::WO;
 
 use crate::{
     boot::{wait},
-    sdk::{scr::SystemControl, video_dma::blitter::Blitter},
+    scr::SystemControl, video_dma::blitter::Blitter,
 };
 
 /// Blitter Control Register hardware layout at `$4000-$4007`.
@@ -71,7 +71,7 @@ pub struct Bcr {
 impl Bcr {
     /// Get a reference to the BCR at `$4000`.
     #[inline(always)]
-    pub(in crate::sdk) unsafe fn new() -> &'static mut Bcr {
+    pub(crate) unsafe fn new() -> &'static mut Bcr {
         unsafe { &mut *(0x4000 as *mut Bcr) }
     }
 }
@@ -91,7 +91,7 @@ pub enum BlitterFillMode {
 /// quadrant at a time through `$4000-$7FFF`. The quadrant is determined by the
 /// MSB of the blitter's GX/GY counters.
 ///
-/// Use [`BlitterGuard::set_vram_quad`](crate::sdk::video_dma::blitter::BlitterGuard::set_vram_quad)
+/// Use [`BlitterGuard::set_vram_quad`](crate::video_dma::blitter::BlitterGuard::set_vram_quad)
 /// to select a quadrant before loading sprite data.
 ///
 /// ```text

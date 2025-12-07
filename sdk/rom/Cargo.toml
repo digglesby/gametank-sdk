@@ -3,8 +3,6 @@ name = "rom"
 version = "0.1.0"
 edition = "2024"
 
-[workspace]
-
 [features]
 default = ["audio"]
 
@@ -12,8 +10,11 @@ default = ["audio"]
 audio = ["audio-wavetable-8v"]
 # audio = ["audio-fm-4op"]
 
-audio-wavetable-8v = []
-audio-fm-4op = []
+audio-wavetable-8v = ["gametank/audio-wavetable-8v"]
+audio-fm-4op = ["gametank/audio-fm-4op"]
+
+[profile.dev]
+panic = "abort"
 
 [profile.release]
 strip = "none"
@@ -23,8 +24,5 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-volatile-register = "0.2.2"
-bit_field = "0.10.3"
-bitflags = "2.9.3"
+gametank = { path = "sdk" }
 gametank-asset-macros = { path = "asset-macros" }
-gametank = { path = "gametank" }
