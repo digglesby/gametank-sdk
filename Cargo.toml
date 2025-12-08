@@ -10,8 +10,7 @@ members = [
 ]
 
 exclude = [
-    "sdk/audio",
-    "sdk/rom",
+    "sdk-template",
     "examples",
     "examples/*",
     "examples/*/*",

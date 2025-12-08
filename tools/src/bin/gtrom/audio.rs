@@ -237,14 +237,14 @@ pub fn do_audio_build(path_str: &str) -> Result<(), String> {
     
     let name = read_audio_toml(path)?;
     
-    // Output to sdk/audiofw/
+    // Output to gametank/audiofw/
     let working_dir = std::env::current_dir()
         .map_err(|e| format!("Failed to get current directory: {}", e))?;
     
-    // Find sdk/audiofw/ directory
-    let output_dir = if working_dir.join("sdk/audiofw").exists() || working_dir.join("sdk").exists() {
-        working_dir.join("sdk/audiofw")
-    } else if working_dir.join("audiofw").exists() || working_dir.file_name().map_or(false, |n| n == "sdk") {
+    // Find gametank/audiofw/ directory
+    let output_dir = if working_dir.join("gametank/audiofw").exists() || working_dir.join("gametank").exists() {
+        working_dir.join("gametank/audiofw")
+    } else if working_dir.join("audiofw").exists() || working_dir.file_name().map_or(false, |n| n == "gametank") {
         working_dir.join("audiofw")
     } else {
         // Fallback - just put it next to the source
