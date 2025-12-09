@@ -4,14 +4,14 @@ MEMORY {
   ZP (rw)        : ORIGIN = 0x0041, LENGTH = 0x00C0
   STACK (rw)     : ORIGIN = 0x0100, LENGTH = 0x0100 
 
-  /* 512 bytes for volume table */
-  VOL (rwx)      : ORIGIN = 0x0200, LENGTH = 0x0200
+  /* 1KB for 4 volume tables (4 × 256 bytes) */
+  VOL (rwx)      : ORIGIN = 0x0200, LENGTH = 0x0400
 
-  /* 2.5k for wavetables */
-  WAVE (rwx)     : ORIGIN = 0x0400, LENGTH = 0x0A00
+  /* 2KB for wavetables (8 × 256 bytes) */
+  WAVE (rwx)     : ORIGIN = 0x0600, LENGTH = 0x0800
   
-  /* 0.5 kb reserved for program, + ideally empty stack */
-  ARAM (rwx)     : ORIGIN = 0x0E00, LENGTH = 0x2FA
+  /* 506 bytes reserved for program code (under 512) */
+  ARAM (rwx)     : ORIGIN = 0x0E00, LENGTH = 0x1FA
   VECTOR_TABLE(rw): ORIGIN = 0x0FFA, LENGTH = 6
 
   SAMPLE (w)     : ORIGIN = 0x8000, LENGTH = 0x8000

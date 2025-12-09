@@ -6,14 +6,9 @@ edition = "2024"
 [workspace]
 
 [features]
-default = ["audio"]
-
-# Select one of the following audio firmware options:
-audio = ["audio-wavetable-8v"]
-# audio = ["audio-fm-4op"]
-
-audio-wavetable-8v = []
-audio-fm-4op = []
+default = ["audio-wavetable-7ch-linear"]
+audio-wavetable-8ch = ["gametank/audio-wavetable-8ch"]
+audio-wavetable-7ch-linear = ["gametank/audio-wavetable-7ch-linear"]
 
 [profile.release]
 strip = "none"

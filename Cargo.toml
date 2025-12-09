@@ -7,10 +7,11 @@ members = [
     "tools/gte/core/gte-acp",
     "tools/gte/core/gte-w65c02s",
     "tools/gte/libretro",
+    "sdk-template/gametank",
 ]
 
 exclude = [
-    "sdk-template",
+    "sdk-template/asset-macros",
     "examples",
     "examples/*",
     "examples/*/*",

@@ -52,16 +52,17 @@ pub const VOICE_SIZE: usize = 7;
 pub const VOICE_COUNT: usize = 8;
 
 /// Base address for wavetables in ACP RAM (CPU-side)
-pub const WAVETABLE_BASE: usize = 0x3400;
+pub const WAVETABLE_BASE: usize = 0x3300;
 /// Size of each wavetable in bytes
 pub const WAVETABLE_SIZE: usize = 256;
 /// Number of wavetables available
-pub const WAVETABLE_COUNT: usize = 8;
+pub const WAVETABLE_COUNT: usize = 11;
 
 /// Wavetable slot addresses (CPU-side)
 pub const WAVETABLE: [u16; WAVETABLE_COUNT] = [
-    0x0400, 0x0500, 0x0600, 0x0700,
-    0x0800, 0x0900, 0x0A00, 0x0B00,
+    0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
+    0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00,
+    0x0D00,
 ];
 
 /// A single synthesizer voice.

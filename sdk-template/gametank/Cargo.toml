@@ -2,11 +2,16 @@
 name = "gametank"
 version = "0.1.0"
 edition = "2024"
+description = "Hardware abstraction layer for the GameTank console"
+license = "MIT"
+repository = "https://github.com/dwbrite/gametank-sdk"
+documentation = "https://docs.rs/gametank"
+keywords = ["gametank", "embedded", "no_std", "6502", "gamedev"]
+categories = ["embedded", "no-std", "game-development"]
 
 [features]
-default = ["audio-wavetable-8v"]
-audio-wavetable-8v = []
-audio-fm-4op = []
+audio-wavetable-8ch = []
+audio-wavetable-7ch-linear = []
 
 [dependencies]
 volatile-register = "0.2.2"

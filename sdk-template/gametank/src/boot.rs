@@ -6,6 +6,7 @@ unsafe extern "C" {
     fn main(console: Console);
 }
 
+#[cfg(target_arch = "mos")]
 #[panic_handler]
 fn panic(_panic: &PanicInfo<'_>) -> ! {
     loop {}

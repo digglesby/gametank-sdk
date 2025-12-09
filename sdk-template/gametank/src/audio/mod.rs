@@ -52,23 +52,32 @@
 //! ## Audio Firmware
 //!
 //! Enable a firmware via Cargo features:
-//! - `audio-wavetable-8v` - 8-voice wavetable synth (default, recommended)
+//! - `audio-wavetable-8ch` - 8-channel wavetable synth (default, recommended)
+//! - `audio-wavetable-7ch-linear` - 7-channel wavetable synth with linear volume (16 levels)
 //!
 //! The firmware runs on the Audio Coprocessor at ~14kHz sample rate,
 //! with about 660 CPU cycles available per sample for synthesis.
 
 // Audio firmware binary - selected via Cargo.toml features
-#[cfg(feature = "audio-wavetable-8v")]
-pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../audiofw/wavetable-8v.bin");
+#[cfg(feature = "audio-wavetable-8ch")]
+pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../audiofw/wavetable-8ch.bin");
+
+#[cfg(feature = "audio-wavetable-7ch-linear")]
+pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../audiofw/wavetable-7ch-linear.bin");
 
 #[cfg(feature = "audio-fm-4op")]
 pub static FIRMWARE: &[u8; 4096] = include_bytes!("../../audiofw/fm-4op.bin");
 
 // Audio interface modules - selected via Cargo.toml features
-#[cfg(feature = "audio-wavetable-8v")]
-pub mod wavetable_8v;
-#[cfg(feature = "audio-wavetable-8v")]
-pub use wavetable_8v::*;
+#[cfg(feature = "audio-wavetable-8ch")]
+pub mod wavetable_8ch;
+#[cfg(feature = "audio-wavetable-8ch")]
+pub use wavetable_8ch::*;
+
+#[cfg(feature = "audio-wavetable-7ch-linear")]
+pub mod wavetable_7ch_linear;
+#[cfg(feature = "audio-wavetable-7ch-linear")]
+pub use wavetable_7ch_linear::*;
 
 // Shared
 pub mod pitch_table;

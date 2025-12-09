@@ -7,24 +7,12 @@ use std::process::Command;
 
 use crate::container::{ensure_container, is_in_container, podman_exec};
 
-/// Read audio.toml to get firmware name
-pub fn read_audio_toml(path: &Path) -> Result<String, String> {
-    let toml_path = path.join("audio.toml");
-    let content = std::fs::read_to_string(&toml_path)
-        .map_err(|e| format!("Failed to read audio.toml: {}", e))?;
-    
-    // Simple TOML parsing - just look for name = "..."
-    for line in content.lines() {
-        let line = line.trim();
-        if line.starts_with("name") {
-            if let Some(value) = line.split('=').nth(1) {
-                let name = value.trim().trim_matches('"').trim_matches('\'');
-                return Ok(name.to_string());
-            }
-        }
-    }
-    
-    Err("Could not find 'name' in audio.toml".to_string())
+/// Get firmware name from directory name
+fn get_firmware_name(path: &Path) -> Result<String, String> {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Invalid path".to_string())
 }
 
 /// Build audio firmware (ASM project) - runs directly
@@ -235,7 +223,7 @@ pub fn do_audio_build(path_str: &str) -> Result<(), String> {
         return Err(format!("Path does not exist: {}", path_str));
     }
     
-    let name = read_audio_toml(path)?;
+    let name = get_firmware_name(path)?;
     
     // Output to gametank/audiofw/
     let working_dir = std::env::current_dir()

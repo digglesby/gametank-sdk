@@ -159,16 +159,6 @@ _start:
     ldx #0xff
     txs
     
-    ; Initialize all 8 voices
-    INIT_VOICE 0
-    INIT_VOICE 1
-    INIT_VOICE 2
-    INIT_VOICE 3
-    INIT_VOICE 4
-    INIT_VOICE 5
-    INIT_VOICE 6
-    INIT_VOICE 7
-    
     ; Enable interrupts
     cli
     
