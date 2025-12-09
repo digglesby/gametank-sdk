@@ -6,7 +6,7 @@ edition = "2024"
 [workspace]
 
 [features]
-default = ["audio-wavetable-7ch-linear"]
+default = ["audio-wavetable-8ch"]
 audio-wavetable-8ch = ["gametank/audio-wavetable-8ch"]
 audio-wavetable-7ch-linear = ["gametank/audio-wavetable-7ch-linear"]
 

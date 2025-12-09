@@ -84,8 +84,9 @@ impl DemoSequencer {
 
             // Steps 6-9: Arpeggio melody on last voice, fade background
             6..=9 => {
-                // Start melody voice at step 6
+                // Reset fade counter at start of step 6
                 if self.step == 6 && self.frame == 0 {
+                    self.bg_fade_counter = 0;
                     v[melody_voice].set_volume(self.melody_level);
                 }
 
@@ -108,11 +109,10 @@ impl DemoSequencer {
                     self.bg_fade_counter = 0;
                     if self.bg_level > 0 {
                         self.bg_level -= 1;
-                        v[0].set_volume(self.bg_level);
-                        v[1].set_volume(self.bg_level);
-                        v[2].set_volume(self.bg_level);
-                        v[3].set_volume(self.bg_level);
-                        v[4].set_volume(self.bg_level);
+                        // Apply volume to all background voices
+                        for i in 0..5 {
+                            v[i].set_volume(self.bg_level);
+                        }
                     }
                 }
             }
@@ -120,7 +120,7 @@ impl DemoSequencer {
             // Fade out melody
             10..=26 => {
                 // Scale fade rate: 8ch needs faster fade (more levels to cover)
-                const MELODY_FADE_INTERVAL: u8 = if MAX_VOLUME > 32 { 4 } else { 15 };
+                const MELODY_FADE_INTERVAL: u8 = if MAX_VOLUME > 32 { 2 } else { 12 };
                 self.melody_fade_counter += 1;
                 if self.melody_fade_counter >= MELODY_FADE_INTERVAL {
                     self.melody_fade_counter = 0;

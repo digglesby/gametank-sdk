@@ -1,0 +1,10 @@
+# cargo-release configuration for gametank HAL
+# Share version with gametank-sdk (tools package)
+
+# Don't create separate tags for gametank - only gametank-sdk tags
+tag = false
+push = false
+publish = true
+
+# Use the same version as gametank-sdk
+shared-version = "0.16.0"
