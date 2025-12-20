@@ -3,7 +3,7 @@
 //! Manages the podman/docker container lifecycle for llvm-mos toolchain access.
 
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 /// Container runtime to use
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -97,22 +97,41 @@ pub fn ensure_container() -> Result<(std::path::PathBuf, ContainerRuntime), Stri
 
     // Start the container
     println!("Starting build container with {}...", cmd);
+
+    // Docker has no "--replace" equivalent so we need to delete the old container
+    // Piping stdout/stderr to null here since docker complains if the container doesn't exist
+    if runtime == ContainerRuntime::Docker {
+        let _ = Command::new(cmd)
+            .args(["stop", "gametank"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
     
     // Build volume mount arg - podman uses :z for SELinux, docker doesn't need it
     let volume_arg = match runtime {
         ContainerRuntime::Podman => format!("{}:/workspace:z", mount_root.display()),
         ContainerRuntime::Docker => format!("{}:/workspace", mount_root.display()),
     };
+
+    let mut start_args = vec![
+        "run", "-d", 
+        "--name", "gametank", 
+        "-v", &volume_arg
+    ];
+    
+    // Include --replace for the Podman runner
+    if runtime == ContainerRuntime::Podman {
+        start_args.push("--replace");
+    }
+
+    start_args.extend([
+        "docker.io/dwbrite/rust-mos:gte", 
+        "sleep", "infinity"
+    ]);
     
     let status = Command::new(cmd)
-        .args([
-            "run", "-d",
-            "--name", "gametank",
-            "-v", &volume_arg,
-            "--replace",
-            "docker.io/dwbrite/rust-mos:gte",
-            "sleep", "infinity"
-        ])
+        .args(start_args)
         .status()
         .map_err(|e| format!("Failed to start container: {}", e))?;
 
