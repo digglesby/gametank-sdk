@@ -98,13 +98,12 @@ pub fn ensure_container() -> Result<(std::path::PathBuf, ContainerRuntime), Stri
     // Start the container
     println!("Starting build container with {}...", cmd);
 
-    // Docker has no "--replace" equivalent so we need to delete the old container
-    // Piping stdout/stderr to null here since docker complains if the container doesn't exist
+    // Docker has no "--replace" equivalent so we need to stop and delete the old container
+    // Piping stdout to null here since docker complains if the container doesn't exist
     if runtime == ContainerRuntime::Docker {
         let _ = Command::new(cmd)
-            .args(["stop", "gametank"])
+            .args(["rm", "-f", "gametank"])
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
             .status();
     }
     
